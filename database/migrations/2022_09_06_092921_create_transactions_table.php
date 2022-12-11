@@ -19,7 +19,7 @@ class CreateTransactionsTable extends Migration
             $table->float('amount')->default(0);
             $table->integer('customer_id')->nullable();
             $table->enum('platform', ['online','offline'])->default('offline');
-            $table->enum('payment_method', ['cash', 'transfer', 'card', 'wallet', 'on_credit', 'pod', 'split'])->nullable();
+            $table->enum('payment_method', ['cash', 'transfer', 'card', 'wallet', 'on_credit', 'pod', 'split', "complementary"])->nullable();
             $table->string('table_description')->nullable();
             $table->integer('bank_id')->nullable();
             $table->integer('user_id');

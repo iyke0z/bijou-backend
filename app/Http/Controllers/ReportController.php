@@ -191,6 +191,13 @@ class ReportController extends Controller
                 ]);
              }
 
+             // get comlementary
+            $complementary_today = Sales::select('sales.*')->join('transactions', 'sales.ref', 'transactions.id')->where('transactions.user_id', $user)->where('transactions.payment_method', "complementary")->where(\DB::raw('DATE(sales.created_at)'),  $start_date)
+            ->where(\DB::raw('DATE_FORMAT(sales.created_at,"%H:%i")'), ">=", "06:00")->sum("sales.price");
+
+            $complementary_next = Sales::select('sales.*')->join('transactions', 'sales.ref', 'transactions.id')->where('transactions.user_id', $user)->where('transactions.payment_method', "complementary")->where(\DB::raw('DATE("sales.created_at")'),  $end_date)
+            ->where(\DB::raw('DATE_FORMAT(sales.created_at,"%H:%i")'), "<=", "05:00")->sum('sales.price');
+
             $summary = [
                 "expected_amount" => $this->getVat($sales_today + $sales_next_day),
                 "paid_amount" => $transactions_today + $transactions_next_day ,
@@ -201,7 +208,8 @@ class ReportController extends Controller
                 "split_payments_card" => $split_payment_card_today + $split_payment_card_next,
                 "split_payments_transfer" => $split_payment_transfer_today + $split_payment_transfer_next,
                 "split_payments_cash" => $split_payment_cash_today + $split_payment_cash_next,
-                "banks" =>$bank_sales
+                "banks" =>$bank_sales,
+                "complementary" => $complementary_today + $complementary_next
             ];
 
             return res_success('report', $summary);
@@ -297,6 +305,13 @@ class ReportController extends Controller
                     'amount' => $card__banktoday +  $card_bank_next_day +  $split_payment_bank_card_today + $split_payment_bank_card_next
                 ]);
              }
+             // get comlementary
+            $complementary_today = Sales::select('sales.*')->join('transactions', 'sales.ref', 'transactions.id')->where('transactions.payment_method', "complementary")->where(\DB::raw('DATE(sales.created_at)'),  $start_date)
+            ->where(\DB::raw('DATE_FORMAT(sales.created_at,"%H:%i")'), ">=", "06:00")->sum("sales.price");
+
+            $complementary_next = Sales::select('sales.*')->join('transactions', 'sales.ref', 'transactions.id')->where('transactions.payment_method', "complementary")->where(\DB::raw('DATE("sales.created_at")'),  $end_date)
+            ->where(\DB::raw('DATE_FORMAT(sales.created_at,"%H:%i")'), "<=", "05:00")->sum('sales.price');
+
 
             $summary = [
                 "expected_amount" => $this->getVat($sales_today + $sales_next_day),
@@ -308,7 +323,8 @@ class ReportController extends Controller
                 "split_payments_card" => $split_payment_card_today + $split_payment_card_next,
                 "split_payments_transfer" => $split_payment_transfer_today + $split_payment_transfer_next,
                 "split_payments_cash" => $split_payment_cash_today + $split_payment_cash_next,
-                "banks" =>$bank_sales
+                "banks" =>$bank_sales,
+                "complementary" => $complementary_today + $complementary_next
             ];
 
             return res_success('report', $summary);
