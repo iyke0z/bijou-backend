@@ -84,4 +84,8 @@ class User extends Authenticatable
      public function access_code(){
         return $this->hasOne(WaiterCode::class, 'user_id');
      }
+
+     public function transactions(){
+      return $this->hasMany(Transaction::class, 'user_id');
+     }
 }

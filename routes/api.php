@@ -150,26 +150,8 @@ Route::prefix('v1')->group(function (){
         });
 
         Route::post('generate-code', [AuthController::class, 'generate_user_codes']);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        Route::post('transaction-report', [ReportController::class, 'generate_report']);
+        Route::post('user-sales-report', [ReportController::class, 'generate_sales_report']);
     });
 });
 
