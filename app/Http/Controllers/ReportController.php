@@ -121,13 +121,14 @@ class ReportController extends Controller
 
             $transactions_next_day = Transaction::where(\DB::raw('DATE(`created_at`)'),  $end_date)
             ->where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")->where('user_id', $user)->sum("amount");
-
+            
             // get sales between 6am the previous day and 4am today
-            $sales_today = Sales::select('sales.*')->join('transactions', 'sales.ref', 'transactions.id')->where('transactions.user_id', $user)->where(\DB::raw('DATE(sales.created_at)'),  $start_date)
+            $sales_today = Sales::select(\DB::raw('sum(price * qty) as  amount'))->join('transactions', 'sales.ref', 'transactions.id')->where('transactions.user_id', $user)->where(\DB::raw('DATE(sales.created_at)'),  $start_date)
             ->where(\DB::raw('DATE_FORMAT(sales.created_at,"%H:%i")'), ">=", "06:00")->sum("sales.price");
-
-            $sales_next_day = Sales::select('sales.*')->join('transactions', 'sales.ref', 'transactions.id')->where('transactions.user_id', $user)->where(\DB::raw('DATE("sales.created_at")'),  $end_date)
+            $sales_today= $sales_today[0]['amount'];
+            $sales_next_day = select(\DB::raw('sum(price * qty) as  amount'))->join('transactions', 'sales.ref', 'transactions.id')->where('transactions.user_id', $user)->where(\DB::raw('DATE("sales.created_at")'),  $end_date)
             ->where(\DB::raw('DATE_FORMAT(sales.created_at,"%H:%i")'), "<=", "05:00")->sum('sales.price');
+            $sales_next_day= $sales_next_day[0]['amount'];
 
             //get transactions paid with cash
             $cash_today =  Transaction::where(\DB::raw('DATE(`created_at`)'),  $start_date)
@@ -192,11 +193,12 @@ class ReportController extends Controller
              }
 
              // get comlementary
-            $complementary_today = Sales::select('sales.*')->join('transactions', 'sales.ref', 'transactions.id')->where('transactions.user_id', $user)->where('transactions.payment_method', "complementary")->where(\DB::raw('DATE(sales.created_at)'),  $start_date)
-            ->where(\DB::raw('DATE_FORMAT(sales.created_at,"%H:%i")'), ">=", "06:00")->sum("sales.price");
+            $complementary_today = Transaction::where(\DB::raw('DATE(`created_at`)'),  $start_date)
+            ->where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), ">=", "06:00")->where('user_id', $user)->where("payment_method", "complementary")->sum("amount");
 
-            $complementary_next = Sales::select('sales.*')->join('transactions', 'sales.ref', 'transactions.id')->where('transactions.user_id', $user)->where('transactions.payment_method', "complementary")->where(\DB::raw('DATE("sales.created_at")'),  $end_date)
-            ->where(\DB::raw('DATE_FORMAT(sales.created_at,"%H:%i")'), "<=", "05:00")->sum('sales.price');
+
+            $complementary_next = Transaction::where(\DB::raw('DATE(`created_at`)'),  $end_date)
+            ->where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")->where('user_id', $user)->where("payment_method", "complementary")->sum("amount");
 
             $summary = [
                 "expected_amount" => $this->getVat($sales_today + $sales_next_day),
@@ -238,11 +240,14 @@ class ReportController extends Controller
             ->with('split')->with("user")->with('sales')->sum("amount");
 
             // get sales between 6am the previous day and 4am today
-            $sales_today = Sales::where(\DB::raw('DATE(`created_at`)'),  $start_date)
-            ->where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), ">=", "06:00")->sum("price");
+            $sales_today = Sales::select(\DB::raw('sum(price * qty) as  amount'))->where(\DB::raw('DATE(`created_at`)'),  $start_date)
+            ->where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), ">=", "06:00")->get();
+            $sales_today = $sales_today[0]['amount'];
 
-            $sales_next_day = Sales::where(\DB::raw('DATE(`created_at`)'),  $end_date)
-            ->where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")->sum('price');
+            $sales_next_day = Sales::select(\DB::raw('sum(price * qty) as  amount'))->where(\DB::raw('DATE(`created_at`)'),  $end_date)
+            ->where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")->get();
+            $sales_next_day = $sales_next_day[0]['amount'];
+
 
             //get transactions paid with cash
             $cash_today =  Transaction::where(\DB::raw('DATE(`created_at`)'),  $start_date)
@@ -306,11 +311,12 @@ class ReportController extends Controller
                 ]);
              }
              // get comlementary
-            $complementary_today = Sales::select('sales.*')->join('transactions', 'sales.ref', 'transactions.id')->where('transactions.payment_method', "complementary")->where(\DB::raw('DATE(sales.created_at)'),  $start_date)
-            ->where(\DB::raw('DATE_FORMAT(sales.created_at,"%H:%i")'), ">=", "06:00")->sum("sales.price");
+            $complementary_today = Transaction::where(\DB::raw('DATE(`created_at`)'),  $start_date)
+            ->where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), ">=", "06:00")->where("payment_method", "complementary")->sum("amount");
 
-            $complementary_next = Sales::select('sales.*')->join('transactions', 'sales.ref', 'transactions.id')->where('transactions.payment_method', "complementary")->where(\DB::raw('DATE("sales.created_at")'),  $end_date)
-            ->where(\DB::raw('DATE_FORMAT(sales.created_at,"%H:%i")'), "<=", "05:00")->sum('sales.price');
+
+            $complementary_next = Transaction::where(\DB::raw('DATE(`created_at`)'),  $end_date)
+            ->where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")->where("payment_method", "complementary")->sum("amount");
 
 
             $summary = [

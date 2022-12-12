@@ -106,8 +106,6 @@ class TransactionRepository implements TransactionRepositoryInterface{
                     $product->stock = $product->stock + $sale["qty"];
                     $product->save();
                 }
-
-                $sale->delete();
             }
 
             // update
@@ -119,13 +117,24 @@ class TransactionRepository implements TransactionRepositoryInterface{
                     $product->stock = $product->stock - $request['products'][$i]["qty"];
                     $product->save();
                 }
-                $sale = new Sales();
-                $sale->product_id = $request['products'][$i]["product_id"];
-                $sale->ref =   $request['ref'];
-                $sale->price = $request['products'][$i]["price"];
-                $sale->qty = $request['products'][$i]["qty"];
-                $sale->user_id = $auth->user_id;
-                $sale->save();
+                
+                $sale = Sales::where("ref", $request['ref'])->where("product_id", $request['products'][$i]["product_id"])->first();
+                if($sale) {
+                    $sale->product_id = $request['products'][$i]["product_id"];
+                    $sale->ref = $request['ref'];
+                    $sale->price = $request['products'][$i]["price"];
+                    $sale->qty = $request['products'][$i]["qty"];
+                    $sale->user_id = $auth->user_id;
+                    $sale->save();
+                }else{
+                    $sale = new Sales();
+                    $sale->product_id = $request['products'][$i]["product_id"];
+                    $sale->ref = $request['ref'];
+                    $sale->price = $request['products'][$i]["price"];
+                    $sale->qty = $request['products'][$i]["qty"];
+                    $sale->user_id = $auth->user_id;
+                    $sale->save();
+                }
             }
             return res_completed('sale order updated');
         }
@@ -172,9 +181,11 @@ class TransactionRepository implements TransactionRepositoryInterface{
             $sales = Sales::where('ref', $request['ref'])->get();
             foreach ($sales as $sale) {
                 // return qty to products
-                $product = Products::where('id', $sale["product_id"])->first();
-                $product->stock = $product->stock + $sale["qty"];
-                $product->save();
+                if($product->category_id == 2){
+                    $product = Products::where('id', $sale["product_id"])->first();
+                    $product->stock = $product->stock + $sale["qty"];
+                    $product->save();
+                }
             }
 
             // update
