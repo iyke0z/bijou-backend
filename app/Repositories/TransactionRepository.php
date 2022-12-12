@@ -26,7 +26,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
 
     public function drinks_prep_status(){
         $drinks = Sales::with(['product' => function($q){
-            $q->where('category_id',"!=", 1);
+            $q->where('category_id',"!=", 1)->where('category_id', "!=", 2);
         }])->with(['transaction' => function($q) {
             $q->where('status', "!=", "cancelled");
         }])->with('user')->where('prep_status', "not_ready")->OrWhere('prep_status', "almost_ready")->get();
