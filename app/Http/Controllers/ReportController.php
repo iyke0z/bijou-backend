@@ -124,10 +124,10 @@ class ReportController extends Controller
             
             // get sales between 6am the previous day and 4am today
             $sales_today = Sales::select(\DB::raw('sum(price * qty) as  amount'))->join('transactions', 'sales.ref', 'transactions.id')->where('transactions.user_id', $user)->where(\DB::raw('DATE(sales.created_at)'),  $start_date)
-            ->where(\DB::raw('DATE_FORMAT(sales.created_at,"%H:%i")'), ">=", "06:00")->sum("sales.price");
+            ->where(\DB::raw('DATE_FORMAT(sales.created_at,"%H:%i")'), ">=", "06:00")->get();
             $sales_today= $sales_today[0]['amount'];
-            $sales_next_day = select(\DB::raw('sum(price * qty) as  amount'))->join('transactions', 'sales.ref', 'transactions.id')->where('transactions.user_id', $user)->where(\DB::raw('DATE("sales.created_at")'),  $end_date)
-            ->where(\DB::raw('DATE_FORMAT(sales.created_at,"%H:%i")'), "<=", "05:00")->sum('sales.price');
+            $sales_next_day = Sales::select(\DB::raw('sum(price * qty) as  amount'))->join('transactions', 'sales.ref', 'transactions.id')->where('transactions.user_id', $user)->where(\DB::raw('DATE("sales.created_at")'),  $end_date)
+            ->where(\DB::raw('DATE_FORMAT(sales.created_at,"%H:%i")'), "<=", "05:00")->get();
             $sales_next_day= $sales_next_day[0]['amount'];
 
             //get transactions paid with cash
