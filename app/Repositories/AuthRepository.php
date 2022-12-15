@@ -103,7 +103,9 @@ class AuthRepository implements AuthRepositoryInterface{
     }
     public function generate_user_codes($request){
         $user = WaiterCode::where('user_id', $request['user_id'])->first();
-        $user->delete();
+        if($user){
+            $user->delete();
+        }
         WaiterCode::create([
             'user_id' => $request['user_id'],
             'code' => $this->generateOTP()
