@@ -68,10 +68,10 @@ class Users extends Seeder
                     "role_id" => $dat[$i]['role_id'],
                     "password"=>$dat[$i]['password'],
                     "gender"=>$dat[$i]['gender'],
-                    "dob"=>$dat[$i]['dob']                        
+                    "dob"=>$dat[$i]['dob']
                     ];
                     User::create($users);
                 }
-        
+
     }
 }

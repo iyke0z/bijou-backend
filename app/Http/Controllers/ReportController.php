@@ -121,7 +121,7 @@ class ReportController extends Controller
 
             $transactions_next_day = Transaction::where(\DB::raw('DATE(`created_at`)'),  $end_date)
             ->where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")->where('user_id', $user)->sum("amount");
-            
+
             // get sales between 6am the previous day and 4am today
             $sales_today = Sales::select(\DB::raw('sum(price * qty) as  amount'))->join('transactions', 'sales.ref', 'transactions.id')->where('transactions.user_id', $user)->where(\DB::raw('DATE(sales.created_at)'),  $start_date)
             ->where(\DB::raw('DATE_FORMAT(sales.created_at,"%H:%i")'), ">=", "06:00")->get();
@@ -200,6 +200,10 @@ class ReportController extends Controller
             $complementary_next = Transaction::where(\DB::raw('DATE(`created_at`)'),  $end_date)
             ->where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")->where('user_id', $user)->where("payment_method", "complementary")->sum("amount");
 
+            $oustanding = Transaction::where(\DB::raw('DATE(`created_at`)'),  $end_date)->where('user_id', $user)->with("sales")
+            ->where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")->where('status', 'pending')->with("split")->get();
+
+
             $summary = [
                 "expected_amount" => $this->getVat($sales_today + $sales_next_day),
                 "paid_amount" => $transactions_today + $transactions_next_day ,
@@ -211,7 +215,8 @@ class ReportController extends Controller
                 "split_payments_transfer" => $split_payment_transfer_today + $split_payment_transfer_next,
                 "split_payments_cash" => $split_payment_cash_today + $split_payment_cash_next,
                 "banks" =>$bank_sales,
-                "complementary" => $complementary_today + $complementary_next
+                "complementary" => $complementary_today + $complementary_next,
+                "outsanding" => $oustanding
             ];
 
             return res_success('report', $summary);
@@ -314,10 +319,20 @@ class ReportController extends Controller
             $complementary_today = Transaction::where(\DB::raw('DATE(`created_at`)'),  $start_date)
             ->where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), ">=", "06:00")->where("payment_method", "complementary")->sum("amount");
 
-
             $complementary_next = Transaction::where(\DB::raw('DATE(`created_at`)'),  $end_date)
             ->where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")->where("payment_method", "complementary")->sum("amount");
 
+            $oustanding_ = Transaction::with(["sales" => function($q){
+                $q->with('product');
+            }])->with("split")->with('user')->where(\DB::raw('DATE(`created_at`)'),  $start_date)
+            ->where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), ">=", "06:00")->where("status", "pending")->get();
+
+            $oustanding__ = Transaction::with(["sales" => function($q){
+                $q->with('product');
+            }])->with("split")->with('user')->where(\DB::raw('DATE(`created_at`)'),  $end_date)
+            ->where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")->where('status', 'pending')->get();
+
+            $oustanding = array_merge($oustanding_->toArray(), $oustanding__->toArray());
 
             $summary = [
                 "expected_amount" => $this->getVat($sales_today + $sales_next_day),
@@ -330,13 +345,13 @@ class ReportController extends Controller
                 "split_payments_transfer" => $split_payment_transfer_today + $split_payment_transfer_next,
                 "split_payments_cash" => $split_payment_cash_today + $split_payment_cash_next,
                 "banks" =>$bank_sales,
-                "complementary" => $complementary_today + $complementary_next
+                "complementary" => $complementary_today + $complementary_next,
+                "oustanding" => $oustanding
             ];
 
             return res_success('report', $summary);
 
         }
-
     }
 
     public function getVat($val){
