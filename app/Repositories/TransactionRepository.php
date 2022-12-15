@@ -174,9 +174,9 @@ class TransactionRepository implements TransactionRepositoryInterface{
     }
 
     public function delete_sale($request){
-        $auth = WaiterCode::where('code', $request["auth_code"])->first();
+        //$auth = WaiterCode::where('code', $request["auth_code"])->first();
 
-        if($auth->exists()){
+        //if($auth->exists()){//
             // delete
             $sales = Sales::where('ref', $request['ref'])->get();
             foreach ($sales as $sale) {
@@ -186,15 +186,18 @@ class TransactionRepository implements TransactionRepositoryInterface{
                     $product->stock = $product->stock + $sale["qty"];
                     $product->save();
                 }
+
+                $sale->delete();
             }
 
             // update
             $transaction = Transaction::find($request['ref']);
             $transaction->update(['status' => "cancelled"]);
+            $transaction->delete();
 
             return res_completed('sale order cancelled');
-        }
-        return res_unauthorized('Unauthorized');
+        //}
+        // return res_unauthorized('Unauthorized');
 
     }
 
