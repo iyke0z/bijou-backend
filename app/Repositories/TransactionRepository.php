@@ -117,7 +117,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
                     $product->stock = $product->stock - $request['products'][$i]["qty"];
                     $product->save();
                 }
-                
+
                 $sale = Sales::where("ref", $request['ref'])->where("product_id", $request['products'][$i]["product_id"])->first();
                 if($sale) {
                     $sale->product_id = $request['products'][$i]["product_id"];
@@ -181,8 +181,8 @@ class TransactionRepository implements TransactionRepositoryInterface{
             $sales = Sales::where('ref', $request['ref'])->get();
             foreach ($sales as $sale) {
                 // return qty to products
+                $product = Products::where('id', $sale["product_id"])->first();
                 if($product->category_id == 2){
-                    $product = Products::where('id', $sale["product_id"])->first();
                     $product->stock = $product->stock + $sale["qty"];
                     $product->save();
                 }
