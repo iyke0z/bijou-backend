@@ -56,7 +56,7 @@ class ProductController extends Controller
     }
 
     public function all_products(){
-        $all_products = Products::with('category')->with('images')->get();
+        $all_products = Products::with('category')->with('images')->orderBy('name', 'ASC')->get();
         return res_success('all products', $all_products);
     }
 
@@ -117,7 +117,7 @@ class ProductController extends Controller
 
     public function all_purchases(){
         $all =  Purchase::with('user')->with(['purchase_detail' => function($q) {
-            $q->join('products', 'purchase_details.product_id', 'products.id');
+            $q->with('product');
         }])->get();
         return res_success('all purchases', $all);
     }

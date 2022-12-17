@@ -25,68 +25,18 @@ class ReportController extends Controller
         ]);
 
         if($validated){
-            if($request['platform'] != 'all'){
-                $getTransactionstoday = Transaction::where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), ">=", "06:00")
-                                    ->where('type', "!=", 'credit')
-                                    ->where('type', "!=", 'new_acount')
-                                    ->where('type', "!=", 'cancelled')
-                                    ->where('platform', $request['platform'])
+                $getTransactions = Transaction::whereBetween(\DB::raw('DATE(`created_at`)'),  [$start_date, $end_date])
                                     ->with('customer')->with('user')
                                     ->with(['sales' => function($q){
                                         $q->join('products', 'sales.product_id', 'products.id');
                                     }])->get();
-                $getTransactionstomorrow = Transaction::where(\DB::raw('DATE(`created_at`)'),  $end_date)
-                ->where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")
-                    ->where('type', "!=", 'credit')
-                    ->where('type', "!=", 'new_acount')
-                    ->where('type', "!=", 'cancelled')
-                    ->where('platform', $request['platform'])
-                    ->with('customer')->with('user')
-                    ->with(['sales' => function($q){
-                        $q->join('products', 'sales.product_id', 'products.id');
-                    }])->get();
 
-                $getTransactions = array_merge( $getTransactionstoday->toArray(), $getTransactionstomorrow->toArray() );
-
-                $get_salesToday = Sales::join('transactions', 'sales.ref', 'transactions.id')
-                ->where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), ">=", "06:00")
+                
+                $get_sales = Sales::join('transactions', 'sales.ref', 'transactions.id')
+                ->whereBetween(\DB::raw('DATE(sales.created_at)'),  [$start_date, $end_date])
                 ->where('transactions.status', '!=', 'cancelled')
-                ->where('transactions.platform', $request['platform'])
                 ->with('product')->with('user')->get();
-
-                $get_salesTomorrow = Sales::join('transactions', 'sales.ref', 'transactions.id')
-                ->where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")
-                ->where('transactions.status', '!=', 'cancelled')
-                ->where('transactions.platform', $request['platform'])
-                ->with('product')->with('user')->get();
-
-                $get_sales = array_merge($get_salesToday, $get_salesTomorrow);
-
-            }else{
-                $getTransactionstoday = Transaction::where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), ">=", "06:00")
-                ->where('type', "!=", 'credit')
-                ->where('type', "!=", 'new_acount')
-                ->where('type', "!=", 'cancelled')
-                ->with('customer')->with('user')
-                ->with(['sales' => function($q){
-                    $q->join('products', 'sales.product_id', 'products.id');
-                }])->get();
-                $getTransactionstomorrow = Transaction::where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")
-                ->where('type', "!=", 'credit')
-                ->where('type', "!=", 'new_acount')
-                ->where('type', "!=", 'cancelled')
-                ->with('customer')->with('user')
-                ->with(['sales' => function($q){
-                    $q->join('products', 'sales.product_id', 'products.id');
-                }])->get();
-                $getTransactions = array_merge($getTransactionstoday->toArray(), $getTransactionstomorrow->toArray() );
-
-                $get_salesToday = Sales::where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), ">=", "06:00")
-                                    ->with('product')->with('user')->get();
-                $get_salesTomorrow = Sales::where(\DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")
-                                    ->with('product')->with('user')->get();
-                $get_sales = array_merge($get_salesToday->toArray(),$get_salesTomorrow->toArray() );
-            }
+            
                 $get_purchases = PurchaseDetails::whereBetween(\DB::raw('DATE(`created_at`)'), [$start_date, $end_date])
                 ->with('purchase')->with('product')->get();
 
