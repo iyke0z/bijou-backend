@@ -30,7 +30,8 @@ class ReportController extends Controller
                                     ->with('customer')->with('user')
                                     ->with(['sales' => function($q){
                                         $q->join('products', 'sales.product_id', 'products.id');
-                                    }])->get();
+                                    }])
+                                    ->withTrashed()->get();
 
                 
                 $get_sales = Sales::join('transactions', 'sales.ref', 'transactions.id')
