@@ -165,6 +165,11 @@ class TransactionRepository implements TransactionRepositoryInterface{
                     $split_payment->save();
                 }
             }
+            if($request['payment_method'] == "wallet"){
+                $customer = Customer::find($request["customer_id"]);
+                $customer->wallet_balance = $customer->wallet_balance - $request["amount"];
+                $customer->save();
+            }
 
             return res_completed("Payment Successful");
         }
