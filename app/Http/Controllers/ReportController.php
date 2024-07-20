@@ -27,23 +27,27 @@ class ReportController extends Controller
 
         if($validated){
                 $getTransactions = Transaction::whereBetween(DB::raw('DATE(`created_at`)'),  [$start_date, $end_date])
-                                    ->with('customer')->with('user')
+                                    ->with('customer')
+                                    ->with(['user' => function ($q) {
+                                        $q->withTrashed();
+                                    }])
                                     ->with(['sales' => function($q){
                                         $q->join('products', 'sales.product_id', 'products.id');
                                     }])
-                                    ->withTrashed()->get();
+                                    ->orderBy('id', 'desc')
+                                    ->get();
 
                 
                 $get_sales = Sales::join('transactions', 'sales.ref', 'transactions.id')
-                ->whereBetween(DB::raw('DATE(sales.created_at)'),  [$start_date, $end_date])
-                ->where('transactions.status', '!=', 'cancelled')
-                ->with('product')->with('user')->get();
+                                ->whereBetween(DB::raw('DATE(sales.created_at)'),  [$start_date, $end_date])
+                                ->where('transactions.status', '!=', 'cancelled')
+                                ->with('product')->with('user')->get();
             
                 $get_purchases = PurchaseDetails::whereBetween(DB::raw('DATE(`created_at`)'), [$start_date, $end_date])
-                ->with('purchase')->with('product')->get();
+                                    ->with('purchase')->with('product')->get();
 
                 $get_expenditures = Expenditure::whereBetween(DB::raw('DATE(`created_at`)'), [$start_date, $end_date])
-                ->with('type')->with('user')->get();
+                                    ->with('type')->with('user')->get();
 
             $report = [
                 'transaction' => $getTransactions,

@@ -6,6 +6,7 @@ use App\Interfaces\CustomerRepositoryInterface;
 use App\Models\Customer;
 use App\Models\Transaction;
 use App\Traits\RefCode;
+use Illuminate\Support\Facades\Auth;
 
 class CustomerRepository implements CustomerRepositoryInterface{
     use RefCode;
@@ -43,7 +44,6 @@ class CustomerRepository implements CustomerRepositoryInterface{
 
     public function fund_customer($request, $id){
         $customer = Customer::find($id);
-        print_r($customer);
 
         if($customer->exists()){
             if ($request['platform'] == 'online') {
@@ -65,7 +65,8 @@ class CustomerRepository implements CustomerRepositoryInterface{
             $transaction->type = "credit";
             $transaction->amount = $request['amount'];
             $transaction->customer_id = $id;
-            $transaction->sales_ref = RefCode::gen_ref_code();
+            $transaction->user_id = Auth::user()->id;
+            // $transaction->payment_method = RefCode::gen_ref_code();
             $transaction->platform = $request['platform'] == 'offline' ? 'offline' : 'online';
             $transaction->save();
     }

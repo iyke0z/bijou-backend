@@ -33,7 +33,7 @@ class UpdateUserRequest extends FormRequest
             "role_id" => 'nullable',
             "password"=>'nullabe',
             'dob'=>'required',
-            'picture'=>'nullable|mimes:png,jpg',
+            'picture'=>'sometimes',
             'gender'=>'required'
         ];
     }

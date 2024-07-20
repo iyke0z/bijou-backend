@@ -8,17 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Transaction extends Model
 {
     use HasFactory;
-    protected $fillable = [
-        'type',
-        'amount',
-        'customer_id',
-        'payment_method',
-        'table_description',
-        'platform',
-        'bank_id',
-        'user_id',
-        'status'
-    ];
+    protected $guarded = ['id'];
 
     public function customer(){
         return $this->belongsTo(Customer::class);
