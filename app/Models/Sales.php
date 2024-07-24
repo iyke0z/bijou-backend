@@ -4,13 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Sales extends Model
 {
-    use HasFactory;
-    protected $fillable = [
-        "product_id",	"ref",	"price",	"qty",	"user_id",	"prep_status"
-    ];
+    use HasFactory, SoftDeletes;
+    protected $guarded = [
+'id'    ];
 
     public function product(){
         return $this->belongsTo(Products::class);

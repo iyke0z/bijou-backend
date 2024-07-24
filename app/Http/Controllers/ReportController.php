@@ -32,10 +32,10 @@ class ReportController extends Controller
                                         $q->withTrashed();
                                     }])
                                     ->with(['sales' => function($q){
-                                        $q->join('products', 'sales.product_id', 'products.id');
+                                        $q->join('products', 'sales.product_id', 'products.id')->withTrashed();
                                     }])
                                     ->orderBy('id', 'desc')
-                                    ->get();
+                                    ->withTrashed()->get();
 
                 
                 $get_sales = Sales::join('transactions', 'sales.ref', 'transactions.id')
@@ -287,18 +287,24 @@ class ReportController extends Controller
             $oustanding = Transaction::with(["sales" => function($q){
                 $q->with('product');
             }])->with("split")->whereBetween('created_at',  [$start_date, $end_date])
-            ->with('user')->where("status", "pending")->get();
+            ->with(['user' => function ($q) {
+                $q->withTrashed();
+            }])->where("status", "pending")->get();
 
             $sold_items = Transaction::with(["sales" => function($q){
                 $q->with('product');
             }])->with("split")->whereBetween('created_at',  [$start_date, $end_date])
-            ->with('user')->where("status", "completed")->get();
+            ->with(['user' => function ($q) {
+                $q->withTrashed();
+            }])->where("status", "completed")->get();
 
 
             $void_items = Transaction::with(["sales" => function($q){
-                $q->with('product');
-            }])->with("split")->whereBetween('created_at',  [$start_date, $end_date])
-            ->with('user')->where("status", "cancelled")->get();
+                $q->with('product')->withTrashed();
+            }])->whereBetween('created_at',  [$start_date, $end_date])
+            ->with(['user' => function ($q) {
+                $q->withTrashed();
+            }])->where("status", "cancelled")->withTrashed()->get();
 
             $summary = [
                 "expected_amount" => $sales == null ? 0 : $sales,//$this->getVat(),
