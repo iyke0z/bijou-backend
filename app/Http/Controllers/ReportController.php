@@ -222,7 +222,6 @@ class ReportController extends Controller
         ]);
 
         if ($validated) {
-
             // get transactions between 6am the previous day - 4am today
             $transactions = Transaction::whereBetween('created_at',  [$start_date, $end_date])
             ->with('split')->with("user")->with('sales')->sum("amount");
@@ -290,6 +289,17 @@ class ReportController extends Controller
             }])->with("split")->whereBetween('created_at',  [$start_date, $end_date])
             ->with('user')->where("status", "pending")->get();
 
+            $sold_items = Transaction::with(["sales" => function($q){
+                $q->with('product');
+            }])->with("split")->whereBetween('created_at',  [$start_date, $end_date])
+            ->with('user')->where("status", "completed")->get();
+
+
+            $void_items = Transaction::with(["sales" => function($q){
+                $q->with('product');
+            }])->with("split")->whereBetween('created_at',  [$start_date, $end_date])
+            ->with('user')->where("status", "cancelled")->get();
+
             $summary = [
                 "expected_amount" => $sales == null ? 0 : $sales,//$this->getVat(),
                 "paid_amount" => $transactions,
@@ -302,7 +312,10 @@ class ReportController extends Controller
                 "split_payments_cash" => $split_payment_cash,
                 "banks" =>$bank_sales,
                 "complementary" => $complementary,
-                "oustanding" => $oustanding
+                "oustanding" => $oustanding,
+                "sold_items" => $sold_items,
+                "void_items" => $void_items,
+                
             ];
 
             return res_success('report', $summary);
