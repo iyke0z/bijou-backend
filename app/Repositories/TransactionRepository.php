@@ -44,7 +44,6 @@ class TransactionRepository implements TransactionRepositoryInterface{
         }])->with('user')->where('prep_status', "not_ready")->OrWhere('prep_status', "almost_ready")->latest()->get();
         return res_success('food', $food);
     }
-
     public function update_prep_status($request){
         $sales = Sales::find($request['id']);
 
@@ -57,7 +56,6 @@ class TransactionRepository implements TransactionRepositoryInterface{
         }
         return res_not_found('order not found');
     }
-
     public function sell($request){
         $auth = WaiterCode::where('code', $request["auth_code"])->first();
 
@@ -165,7 +163,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
                     $split_payment->save();
                 }
             }
-            if($request['payment_method'] == "wallet"){
+            if($request['payment_method'] == "wallet" || $request['payment_method'] == 'on_credit'){
                 $customer = Customer::find($request["customer_id"]);
                 $customer->wallet_balance = $customer->wallet_balance - $request["amount"];
                 $customer->save();

@@ -22,6 +22,7 @@ class CategoryResource extends JsonResource
         return [
             "id"=> $this->id,
             "name" => $this->name,
+            "has_stock" => $this->has_stock,
             "products" => $this->get_product_images($this->products)
         ];
 

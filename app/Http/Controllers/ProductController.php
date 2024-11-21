@@ -21,12 +21,13 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
+    public $productRepo;
     public function __construct(ProductRepositoryInterface $productRepo){
-        return $this->productRepo = $productRepo;
+         $this->productRepo = $productRepo;
     }
     public function create_category(CreateCategoryRequest $request){
-        $validated = $request->validated();
-        return $this->productRepo->create_category($validated);
+        // $validated = $request->validated();
+        return $this->productRepo->create_category($request);
     }
     public function update_category(UpdateCategoryRequest $request, $id){
         $validated = $request->validated();

@@ -38,7 +38,8 @@ class CreateSalesRequest extends FormRequest
             "products" => "required|array",
             "platform"=>'nullable',
             "auth_code" => 'required',
-            'description' => 'nullable'
+            'description' => 'nullable',
+            'amount' => 'required'
         ];
     }
 }

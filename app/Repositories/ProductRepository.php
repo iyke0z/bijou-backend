@@ -19,7 +19,11 @@ class ProductRepository implements ProductRepositoryInterface{
             $check = Category::where('name', strtolower($request['category'][$i]['name']))->first();
             if (!$check) {
                 // create category
-                Category::create(['name' => strtolower($request['category'][$i]['name'])]);
+                Category::create([
+                    'name' => strtolower($request['category'][$i]['name']),
+                    'has_stock' => $request['category'][$i]['has_stock']
+                    ]
+                );
             }else{
                 array_push($already_exists, $request['category'][$i]['name']);
             }
@@ -34,7 +38,9 @@ class ProductRepository implements ProductRepositoryInterface{
         $category = Category::find($id);
         if($category->exists()){
             // update
-            $category->update(['name' => $request['name']]);
+            $category->update(['name' => $request['name'],
+                                    'has_stock' => $request['has_stock']
+                            ]);
             return res_success('category updated', $category);
         }else{
             return res_not_found('category does not exist');
@@ -106,20 +112,20 @@ class ProductRepository implements ProductRepositoryInterface{
     }
 
     public function generate_product_report($request, $id){
-        $this->start_date = $request['start_date'];
-        $this->end_date = $request['end_date'];
+        $start_date = $request['start_date'];
+        $end_date = $request['end_date'];
         $report = Products::with('category')->with(
-            ['sales' => function($q) {
+            ['sales' => function($q) use ($start_date, $end_date){
                 $q->select('sales.*','users.fullname')
                 ->join('users', 'sales.user_id', 'users.id')
-                ->whereBetween('sales.created_at', [$this->start_date, $this->end_date]);
+                ->whereBetween('sales.created_at', [$start_date, $end_date]);
             }]
             )->with(
-                ['purchases' => function($q) {
+                ['purchases' => function($q) use ($start_date, $end_date) {
                     $q->select('purchase_details.*', 'purchases.user_id','users.fullname')
                         ->join('purchases', 'purchase_details.purchase_id', 'purchases.id')
                         ->join('users', 'purchases.user_id', 'users.id')
-                        ->whereBetween('purchase_details.created_at', [$this->start_date, $this->end_date]);
+                        ->whereBetween('purchase_details.created_at', [$start_date, $end_date]);
                 }]
             )->with('images')->find($id);
         return res_success('report', $report);

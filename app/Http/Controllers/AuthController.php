@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Validator;
 class AuthController extends Controller
 {
     use BusinessTrait, AuthTrait;
+    public $authRepo;
     public function __construct(AuthRepositoryInterface $authRepo)
     {
         $this->authRepo = $authRepo;

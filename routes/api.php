@@ -50,11 +50,13 @@ Route::prefix('v1')->group(function (){
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', function (Request $request) {
             $user = User::with('role')
-            ->with('purchase')
-            ->with('sales')
+            // ->with('purchase')
+            // ->with('sales')
             ->with('access_log')
-            ->with('expenditure_types')
-            ->with('expenditure')->find($request->user()->id);
+            ->with('access_code')
+            // ->with('expenditure_types')
+            // ->with('expenditure')
+            ->find($request->user()->id);
             return $user;
         });
         Route::post('logout', [AuthController::class, 'logout']);
@@ -142,7 +144,15 @@ Route::prefix('v1')->group(function (){
         Route::prefix('report')->group(function (){
             Route::post('/', [ReportController::class, 'general_report']);
             Route::post('/deleted', [ReportController::class, 'cancelled_receipt']);
+            Route::post('/sales-performance', [ReportController::class, 'getSalesPerformance']);
+            Route::post('/opex-performance', [ReportController::class, 'getOpexPerformance']);
+            Route::get('/debt-performance', [ReportController::class, 'getCustomerInsightPerformance']);
+            Route::post('/cogs-performance', [ReportController::class, 'getCogs']);
+            Route::post('/method-performance', [ReportController::class, 'getPaymentMethodPerformance']);
+            Route::post('/profit-loss', [ReportController::class, 'getProfitLoss']);
+            
         });
+
         Route::prefix('banks')->group(function (){
             Route::post('/store', [AuthController::class, 'create_bank']);
             Route::post('/update', [AuthController::class, 'update_bank']);

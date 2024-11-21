@@ -25,6 +25,7 @@ class AuthRepository implements AuthRepositoryInterface{
             $log->save();
             $token = $user->createToken('auth_token')->plainTextToken;
             return res_success("token", [
+                'user' => User::with('role')->where('id', $user->id)->first(),
                 'access_token' => $token,
                 'token_type' => 'Bearer',
             ]);

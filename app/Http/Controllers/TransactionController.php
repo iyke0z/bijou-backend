@@ -21,6 +21,7 @@ use App\Models\WaiterCode;
 use App\Traits\CheckoutTrait;
 use Carbon\Carbon;
 use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator as FacadesValidator;
 
 use function PHPUnit\Framework\isNull;
@@ -28,13 +29,14 @@ use function PHPUnit\Framework\isNull;
 class TransactionController extends Controller
 {
     use CheckoutTrait;
+    public $transRepo;
     public function __construct(TransactionRepositoryInterface $transRepo){
         $this->transRepo = $transRepo;
     }
 
-    public function sell(CreateSalesRequest $request){
-        $validated = $request->validated();
-        return $this->transRepo->sell($validated);
+    public function sell(Request $request){
+        // $validated = $request->validated();
+        return $this->transRepo->sell($request);
     }
     public function update_sale(UpdateSalesRequest $request){
             $validated = $request->validated();
@@ -63,7 +65,7 @@ class TransactionController extends Controller
     public function periodic_sales(PeriodicSalesRequest $request){
         if($request['platform'] == 'all'){
             $sales = Sales::join('transactions', 'sales.ref', 'transactions.id')
-                        ->whereBetween(\DB::raw('DATE(sales.`created_at`)'), [$request['start_date'], $request['end_date']])->with('product')
+                        ->whereBetween(DB::raw('DATE(sales.`created_at`)'), [$request['start_date'], $request['end_date']])->with('product')
                         ->with('discount')
                         ->with('user')
                         ->get();
@@ -71,7 +73,7 @@ class TransactionController extends Controller
             return res_success('all sales', $sales);
         }else{
             $sales = Sales::join('transactions', 'sales.ref', 'transactions.id')
-                        ->whereBetween(\DB::raw('DATE(sales.`created_at`)'), [$request['start_date'], $request['end_date']])->with('product')
+                        ->whereBetween(DB::raw('DATE(sales.`created_at`)'), [$request['start_date'], $request['end_date']])->with('product')
                         ->where('transactions.platform', $request['platform'])
                         ->with('discount')
                         ->with('user')
@@ -85,18 +87,18 @@ class TransactionController extends Controller
         $today = Carbon::now();
         $tomorrow = Carbon::tomorrow();
 
-        $sales = Transaction::whereBetween(\DB::raw('DATE(`created_at`)'), [$today->format('Y-m-d'), $tomorrow->format('Y-m-d')])
+        $sales = Transaction::whereBetween(DB::raw('DATE(`created_at`)'), [$today->format('Y-m-d'), $tomorrow->format('Y-m-d')])
         ->where('type', '!=', 'credit')
         ->where('type', '!=', 'new_acount')
         ->with('sales')->get();
 
-        $salesOnline = Transaction::whereBetween(\DB::raw('DATE(`created_at`)'), [$today->format('Y-m-d'), $tomorrow->format('Y-m-d')])
+        $salesOnline = Transaction::whereBetween(DB::raw('DATE(`created_at`)'), [$today->format('Y-m-d'), $tomorrow->format('Y-m-d')])
         ->where('type', '!=', 'credit')
         ->where('type', '!=', 'new_acount')
         ->where('platform', 'online')
         ->with('sales')->get();
 
-        $salesOffline = Transaction::whereBetween(\DB::raw('DATE(`created_at`)'), [$today->format('Y-m-d'), $tomorrow->format('Y-m-d')])
+        $salesOffline = Transaction::whereBetween(DB::raw('DATE(`created_at`)'), [$today->format('Y-m-d'), $tomorrow->format('Y-m-d')])
         ->where('type', '!=', 'credit')
         ->where('type', '!=', 'new_acount')
         ->where('platform', 'offline')

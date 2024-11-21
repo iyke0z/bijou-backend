@@ -6,6 +6,7 @@ use App\Models\Expenditure;
 use App\Models\ExpenditureType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class ExpenditureController extends Controller
@@ -103,7 +104,9 @@ class ExpenditureController extends Controller
         ]);
 
         if($validated){
-            $report = Expenditure::whereBetween('created_at', [$start_date, $end_date])->with('type')->with('user')->get();
+            $report = Expenditure::whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date])
+                                ->with('type')->with('user')
+                                 ->get();
             return res_success('expenditures', $report);
         }
     }
