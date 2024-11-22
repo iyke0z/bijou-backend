@@ -5,8 +5,10 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ExpenditureController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\WebHookController;
 use App\Interfaces\TransactionRepositoryInterface;
 use App\Models\ExpenditureType;
 use Illuminate\Http\Request;
@@ -29,8 +31,15 @@ use App\Models\User;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+Route::post('/webhook', [WebHookController::class, 'webHookHandlerPaystack']);
 
 Route::prefix('v1')->group(function (){
+    Route::prefix('admin')->group(function () {
+        Route::get('packages/', [SuperAdminController::class, 'getPackages']);
+        Route::post('create-package', [SuperAdminController::class, 'createPackage']);
+        Route::put('update-package/{id}', [SuperAdminController::class, 'updatePackage']);
+        Route::delete('delete-package/', [SuperAdminController::class, 'deletePackage']);
+    });
         // Auth
     Route::post('sell/', [TransactionController::class, 'sell'])->middleware('IaActive');
     Route::post('sell/update', [TransactionController::class, 'update_sale'])->middleware('IaActive');
@@ -43,7 +52,7 @@ Route::prefix('v1')->group(function (){
     Route::get('product/', [ProductController::class, 'all_products']);
     Route::get('customer/all', [CustomerController::class, 'all_customers']);
     Route::get('banks/', [AuthController::class, 'all_banks']);
-
+    Route::get('get-expiration', [AuthController::class, 'get_expiration']);
     Route::post('login', [AuthController::class, 'login'])->name('login');
     Route::get('/business/details', [AuthController::class, 'show_business']);
     Route::post('/business/create', [AuthController::class, 'create_business_details'])->middleware('IaActive');

@@ -32,6 +32,11 @@ return [
     'paystack' => [
         'secret' => env('PAYSTACK_SECRETE'),
         'public' => env('PAYSTACK_PUBLIC')
+    ],
+    'webhooks' => [
+        'paystack' => [
+            'secret' => "sk_live_dfb71646e6564dbe906e1e25b6d6b207b36c07f0"
+        ]
     ]
 
 ];
