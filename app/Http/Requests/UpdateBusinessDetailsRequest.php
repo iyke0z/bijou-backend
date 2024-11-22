@@ -25,15 +25,15 @@ class UpdateBusinessDetailsRequest extends FormRequest
     {
         return [
             "name" => "required",
-            "logo" => "nullable:mimes:png,jpg",
+            "logo" => "sometimes:mimes:png,jpg",
             "email" => "nullable",
-            "website" => "nullable",
+            "website" => "sometimes",
             "phone_one" => "required",
             "phone_two" => "nullable",
             "motto" => "nullable",
             "vat" => "required",
-            "status"=>"required",
-            "expiry_date"=>'nullable'
+            "status"=>"sometimes",
+            "expiry_date"=>'sometimes'
         ];
     }
 }

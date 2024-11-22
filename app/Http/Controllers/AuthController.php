@@ -13,6 +13,7 @@ use App\Models\Banks;
 use App\Models\BusinessDetails;
 use App\Traits\AuthTrait;
 use App\Traits\BusinessTrait;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -37,6 +38,7 @@ class AuthController extends Controller
         $validated = $request->validated();
         return $this->authRepo->create_business_details($validated);
     }
+
 
     public function update_business_details(UpdateBusinessDetailsRequest $request, $id){
         $validated = $request->validated();
@@ -133,5 +135,41 @@ class AuthController extends Controller
         $validated = $request->validated();
 
         return $this->authRepo->generate_user_codes($validated);
+    }
+
+    public function get_expiration(){
+            // Retrieve the first active status
+    $active_status = BusinessDetails::first();
+
+    if (!$active_status || !isset($active_status->expiry_date)) {
+        $this->expire();
+        // If no active status or expiry date is not set, return an expired status
+        return res_success('sucess', 'expired');
+    }
+
+    // Get the current date and expiry date
+    $current_date = Carbon::now();
+    $expiry_date = Carbon::createFromTimestamp($active_status->expiry_date);
+
+    // Calculate the difference in days between now and expiry date
+    $days_left = $current_date->diffInDays($expiry_date, false);
+
+    if ($days_left < 0) {
+        // Subscription has expired
+        $this->expire();
+        return res_success('sucess', 'expired');
+    } elseif ($days_left === 0) {
+        // Subscription expires today
+        return res_success('sucess', 'expires_today');
+    } elseif ($days_left === 1) {
+        // Subscription expires tomorrow
+        return res_success('sucess', 'expires_tomorrow');
+    } elseif ($days_left === 2) {
+        // Subscription expires in two days
+        return res_success('sucess', 'expires_in_two_days');
+    } else {
+        // Subscription is active
+        return res_success('sucess', 'active');
+    }
     }
 }

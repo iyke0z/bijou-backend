@@ -18,6 +18,7 @@ use App\Models\Purchase;
 use App\Models\PurchaseDetails;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
@@ -124,7 +125,7 @@ class ProductController extends Controller
     }
 
     public function purchase_report(Request $request){
-        $all =  Purchase::whereBetween(\DB::raw('DATE(`created_at`)'), [$request['start_date'], $request['end_date']])->with('user')->with(['purchase_detail' => function($q) {
+        $all =  Purchase::whereBetween(DB::raw('DATE(`created_at`)'), [$request['start_date'], $request['end_date']])->with('user')->with(['purchase_detail' => function($q) {
             $q->join('products', 'purchase_details.product_id', 'products.id');
         }])->get();
         return res_success('purchase report', $all);

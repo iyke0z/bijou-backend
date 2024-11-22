@@ -8,7 +8,7 @@ trait AuthTrait{
     }
 
 
-    public function hashString($string) {
+    public static function hashString($string) {
         $h = 7;
         $string = str_split($string);
         $letters = ['a', 'c', 'd', 'e', 'g', 'i', 'l', 'm', 'n', 'o', 'p', 'r', 's', 't', 'u', 'w'];
