@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BusinessDetails;
+use App\Models\Package;
 use App\Models\SubscriptionLog;
 use App\Models\Transaction;
 use App\Models\User;
@@ -43,8 +44,9 @@ class WebHookController extends Controller
                     // update wallet
                     $user->update(['active' => $user->wallet + $request['data']['amount']/100]);
                     
+                    $package = Package::where('price', $request['data']['amount']/100)->first();
                     SubscriptionLog::create([
-                        "package_id" => '',
+                        "package_id" => $package->id,
                         "business_id" => $user->id,
                     ]);
                     return response()->json([],200);
