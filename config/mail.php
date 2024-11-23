@@ -34,16 +34,28 @@ return [
     */
 
     'mailers' => [
+        // 'smtp' => [
+        //     'transport' => 'smtp',
+        //     'host' => env('MAIL_HOST', 'smtp.mailgun.org'),
+        //     'port' => env('MAIL_PORT', 587),
+        //     'encryption' => env('MAIL_ENCRYPTION', 'tls'),
+        //     'username' => env('MAIL_USERNAME'),
+        //     'password' => env('MAIL_PASSWORD'),
+        //     'timeout' => null,
+        //     'auth_mode' => null,
+        // ],
+
         'smtp' => [
             'transport' => 'smtp',
-            'host' => env('MAIL_HOST', 'smtp.mailgun.org'),
-            'port' => env('MAIL_PORT', 587),
-            'encryption' => env('MAIL_ENCRYPTION', 'tls'),
-            'username' => env('MAIL_USERNAME'),
-            'password' => env('MAIL_PASSWORD'),
+            'host' => 'mail.bijoucafe.com.ng',
+            'port' => 465,
+            'encryption' => 'ssl',  // Use SSL for port 465
+            'username' => '_mainaccount@bijoucafe.com.ng',
+            'password' => 'ZdHX3)8kb2@oP0',  // Use your cPanel password
             'timeout' => null,
             'auth_mode' => null,
         ],
+        
 
         'ses' => [
             'transport' => 'ses',

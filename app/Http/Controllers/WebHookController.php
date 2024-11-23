@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\EmailActivationCode;
 use App\Models\ActivationCode;
 use App\Models\BusinessDetails;
 use App\Models\Package;
@@ -12,6 +13,7 @@ use App\Traits\AuthTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log as FacadesLog;
+use Illuminate\Support\Facades\Mail;
 
 class WebHookController extends Controller
 {
@@ -46,14 +48,18 @@ class WebHookController extends Controller
                     // update wallet
                     // create activation code
                     $package = Package::where('price', $request['data']['amount']/100)->first();
+                    $activationCode = AuthTrait::hashString(random_int(1,17));
                     ActivationCode::create([
-                        "code"=> AuthTrait::hashString(random_int(1,17)),
+                        "code"=> $activationCode,
                         "package_id" => $package->id
                     ]);
                     SubscriptionLog::create([
                         "package_id" => $package->id,
                         "business_id" => $user->id,
                     ]);
+                    //email code to the user
+                    Mail::to($request['data']['customer']['email'])->send(new EmailActivationCode($activationCode));
+
                     return response()->json([],200);
                 }else{
                     return response()->json([],400);
