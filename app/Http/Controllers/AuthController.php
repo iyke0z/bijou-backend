@@ -77,8 +77,6 @@ class AuthController extends Controller
         $validated = Validator::make($request->all(), ['code' => 'required']);
         $business = BusinessDetails::first();
 
-        Mail::to($business->email)->send(new EmailActivationCode($request['code']));
-
         if($validated){
             $code = ActivationCode::all();
             if($code){

@@ -3,8 +3,8 @@ namespace App\Traits;
 
 trait AuthTrait{
 
-    public function generateCode(){
-
+    public static function generateCode(){
+        return random_bytes(7);
     }
 
 

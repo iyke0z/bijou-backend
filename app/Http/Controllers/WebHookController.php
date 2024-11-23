@@ -48,7 +48,8 @@ class WebHookController extends Controller
                     // update wallet
                     // create activation code
                     $package = Package::where('price', $request['data']['amount']/100)->first();
-                    $activationCode = AuthTrait::hashString(random_int(1,17));
+                    $hash = random_int(1,17);
+                    $activationCode = AuthTrait::generateCode();
                     ActivationCode::create([
                         "code"=> $activationCode,
                         "package_id" => $package->id
