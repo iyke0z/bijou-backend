@@ -7,6 +7,7 @@ use App\Http\Requests\GenerateCodeRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\UpdateBusinessDetailsRequest;
 use App\Interfaces\AuthRepositoryInterface;
+use App\Mail\EmailActivationCode;
 use App\Models\ActivationCode;
 use App\Models\ActivationCodeLog;
 use App\Models\Banks;
@@ -16,6 +17,7 @@ use App\Traits\AuthTrait;
 use App\Traits\BusinessTrait;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
@@ -73,6 +75,10 @@ class AuthController extends Controller
 
     public function use_code(Request $request){
         $validated = Validator::make($request->all(), ['code' => 'required']);
+        $business = BusinessDetails::first();
+
+        Mail::to($business->email)->send(new EmailActivationCode($request['code']));
+
         if($validated){
             $code = ActivationCode::all();
             if($code){

@@ -16,24 +16,25 @@ class PackageSeeder extends Seeder
     {
         $package = [
             [
-                'price' => 20000,
-                'duration' => 365,
-                'description' => 'One year'
-            ],
-            [
-                'price' => 3000,
+                'price' => 5000,
                 'duration' => 30,
-                'description' => 'One month'
+                'description' => 'ONE MONTH'
             ],
             [
-                'price' => 8000,
+                'price' => 25000,
+                'duration' => 365,
+                'description' => 'ONE YEAR'
+            ],
+            
+            [
+                'price' => 10000,
                 'duration' => 90,
-                'description' => 'Three months'
+                'description' => 'THREE MONTHS'
             ],
             [
-                'price' => 11000,
+                'price' => 15000,
                 'duration' => 90,
-                'description' => 'Six months'
+                'description' => 'SIX MONTHS'
             ],
         ];
 
