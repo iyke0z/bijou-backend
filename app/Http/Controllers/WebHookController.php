@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivationCode;
 use App\Models\BusinessDetails;
 use App\Models\Package;
 use App\Models\SubscriptionLog;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Traits\AuthTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log as FacadesLog;
@@ -42,9 +44,12 @@ class WebHookController extends Controller
                         'ref' => $request['data']['reference']
                     ];
                     // update wallet
-                    $user->update(['active' => $user->wallet + $request['data']['amount']/100]);
-                    
+                    // create activation code
                     $package = Package::where('price', $request['data']['amount']/100)->first();
+                    ActivationCode::create([
+                        "code"=> AuthTrait::hashString(random_int(1,17)),
+                        "package_id" => $package->id
+                    ]);
                     SubscriptionLog::create([
                         "package_id" => $package->id,
                         "business_id" => $user->id,

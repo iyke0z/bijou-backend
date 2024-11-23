@@ -9,5 +9,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class ActivationCode extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $fillable = ["code"];
+    protected $guarded = ["id"];
+
+    public function package(){
+        return $this->belongsTo(Package::class, 'package_id');
+    }
 }

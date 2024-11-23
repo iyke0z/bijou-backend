@@ -11,6 +11,7 @@ use App\Models\ActivationCode;
 use App\Models\ActivationCodeLog;
 use App\Models\Banks;
 use App\Models\BusinessDetails;
+use App\Models\Package;
 use App\Traits\AuthTrait;
 use App\Traits\BusinessTrait;
 use Carbon\Carbon;
@@ -77,9 +78,11 @@ class AuthController extends Controller
             if($code){
                 foreach ($code as $key) {
                     if(AuthTrait::unHash($key->code) == $request['code']){
+                        $package = Package::where('id', $code['package_id'])->first();
                         // update business
                         $business = BusinessDetails::first();
-                        $business->expiry_date = strtotime( "+1 month", time() );
+                        
+                        $business->expiry_date = strtotime("+$package->duration days", time());
                         $business->save();
                         // log_activation
                         ActivationCodeLog::create([
