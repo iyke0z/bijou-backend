@@ -85,7 +85,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
                 $sale->save();
 
             }
-            return res_completed('sale order created');
+            return res_success('sale order created', $sale);
         }
 
         return res_unauthorized('Unauthorized');
