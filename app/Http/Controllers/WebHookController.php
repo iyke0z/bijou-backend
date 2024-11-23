@@ -27,29 +27,16 @@ class WebHookController extends Controller
         }
         
          
-        public function webHookHandlerPaystack(Request $request){       
-            FacadesLog::info($request);
-            // get server origin information
-            $secret = config('services.webhooks.paystack.secret');
-            $header = $request->header();
-            $input = @file_get_contents("php://input");
-            $user = BusinessDetails::where('email', $request['data']['customer']['email'])->first();
+        public function webHookHandler(Request $request){       
             
-            if($header['x-paystack-signature'][0] !== hash_hmac('sha512', $input, $secret)){
-                abort(401);
-            }else{
+                $user = BusinessDetails::where('email', $request['data']['customer']['email'])->first();
                 $verify = $this->verifyTransaction($request['data']['reference']);
                 if($verify['data']['status'] == 'success' && $request['event'] == "charge.success"){
-                    $user = BusinessDetails::where('email', $request['data']['customer']['email'])->first();
-                    $details = [
-                        "userid" => $user->id,
-                        'ref' => $request['data']['reference']
-                    ];
-                    // update wallet
+                    $user = BusinessDetails::where('email', $request['email'])->first();
                     // create activation code
-                    $package = Package::where('price', $request['data']['amount']/100)->first();
-                    $hash = random_int(1,17);
-                    $activationCode = AuthTrait::generateCode();
+                    $package = Package::where('price', $request['amount']/100)->first();
+                    // $activationCode = AuthTrait::generateCode();
+                    $activationCode =  random_bytes(8);
                     ActivationCode::create([
                         "code"=> $activationCode,
                         "package_id" => $package->id
@@ -64,7 +51,6 @@ class WebHookController extends Controller
                     return response()->json([],200);
                 }else{
                     return response()->json([],400);
-                }
             }
         }
 }

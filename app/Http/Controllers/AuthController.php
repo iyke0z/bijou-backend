@@ -81,7 +81,7 @@ class AuthController extends Controller
             $code = ActivationCode::all();
             if($code){
                 foreach ($code as $key) {
-                    if(AuthTrait::unHash($key->code) == $request['code']){
+                    // if(AuthTrait::unHash($key->code) == $request['code']){
                         $package = Package::where('id', $code['package_id'])->first();
                         // update business
                         $business = BusinessDetails::first();
@@ -95,11 +95,10 @@ class AuthController extends Controller
                         ]);
                         $key->delete();
                         return res_completed('activation successful');
-                    }
-                    return res_completed('activation code not usable');
+                    // }
                 }
             }
-            return res_completed('empty');
+            return res_bad_request('activation code not usable');
         }
     }
 

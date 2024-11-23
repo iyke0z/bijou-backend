@@ -4,7 +4,7 @@ namespace App\Traits;
 trait AuthTrait{
 
     public static function generateCode(){
-        return random_bytes(7);
+        return random_int(1, 9999999);
     }
 
 
