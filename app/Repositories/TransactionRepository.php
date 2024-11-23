@@ -62,9 +62,12 @@ class TransactionRepository implements TransactionRepositoryInterface{
         if($auth->exists()){
             // create new transaction
             $transaction = new Transaction();
-            $transaction->platform = 'offline';
+            $transaction->platform = 'online';
             $transaction->user_id = $auth->user_id;
-            $transaction->status = "pending";
+            $transaction->status =  $transaction->is_order == true ? "pending" : "completed";
+            $transaction->type =  $transaction->is_order == true ? null : "sold";
+            $transaction->amount =  $transaction->is_order == true ? null : $request['amount'];
+            $transaction->payment_method =  $transaction->is_order == true ? null : $request['payment_method'];
             $transaction->table_description = $request['description'];
             $transaction->save();
             // create new sales order
