@@ -29,7 +29,7 @@ class EmailActivationCode extends Mailable
      */
     public function build()
     {
-        return $this->from('noreply@efficiencylabs.com.ng')  // Set the sender email address
+        return $this->from('noreply@ngmkt.site')  // Set the sender email address
         ->subject('Your Activation Code')
         ->view('emails.activation_code');
     }
