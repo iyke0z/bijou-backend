@@ -76,7 +76,7 @@ class AuthRepository implements AuthRepositoryInterface{
         $business_details->update([
             "name" => $request["name"],
             "logo" => !is_string($request['logo']) ? $logo: $request['logo'],
-            "email" => $request["email"],
+            // "email" => $request["email"],
             "website" => $request["website"],
             "phone_one" => $request["phone_one"],
             "phone_two" => $request["phone_two"],

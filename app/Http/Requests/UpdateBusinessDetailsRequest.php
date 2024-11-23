@@ -26,7 +26,6 @@ class UpdateBusinessDetailsRequest extends FormRequest
         return [
             "name" => "required",
             "logo" => "sometimes:mimes:png,jpg",
-            "email" => "nullable",
             "website" => "sometimes",
             "phone_one" => "required",
             "phone_two" => "nullable",
