@@ -14,7 +14,7 @@ class ExpenditureController extends Controller
     public function new_type(Request $request){
         $validated = Validator::make($request->all(), ['name' => 'required']);
         if($validated){
-            $check = ExpenditureType::where(strtolower('name'), strtolower($request['name']))->first();
+            $check = ExpenditureType::where(strtolower('name'), strtolower($request['name']))->where('expenditure_type', $request['expenditure_type'])->first();
             if(!$check){
                 ExpenditureType::create([
                     'name' => $request['name'],
