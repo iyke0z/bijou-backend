@@ -446,7 +446,6 @@ class ReportController extends Controller
             ->whereBetween(DB::raw('DATE(created_at)'), [$request['start_date'], $request['end_date']])
             ->where('status', 'completed')
             ->sum('amount');
-        $sales = $sales == 0 ? 1 : $sales;
         $turnover = $sales;
         $cogs = Purchase::whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date])
                             ->sum(DB::raw('price + added_costs'));
@@ -456,8 +455,8 @@ class ReportController extends Controller
         $gross_profit = $turnover - $cogs;
         $total_expenditure = $opex;
         $net_profit = $gross_profit - $total_expenditure;
-        $gross_profit_margin = ($gross_profit/$turnover) * 100;
-        $net_profit_margin = ($net_profit/$turnover) * 100;
+        $gross_profit_margin = $turnover > 0 ? ($gross_profit/$turnover) * 100 :0;
+        $net_profit_margin = $turnover > 0 ? ($net_profit/$turnover) * 100 : 0;
 
         $result = [
             "turnover" => $turnover,
