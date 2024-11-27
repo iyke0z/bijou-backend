@@ -18,6 +18,7 @@ class ExpenditureController extends Controller
             if(!$check){
                 ExpenditureType::create([
                     'name' => $request['name'],
+                    'expenditure_type' => $request['expenditure_type'],
                     'user_id' => Auth::user()->id,
                 ]);
                 return res_completed('created');
@@ -33,6 +34,7 @@ class ExpenditureController extends Controller
             if($validated){
                 $type->update([
                     'name' => $request['name'],
+                    'expenditure_type' => $request['expenditure_type'],
                     'user_id' => Auth::user()->id,
                 ]);
                 return res_completed('updated');
