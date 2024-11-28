@@ -17,6 +17,7 @@ use App\Traits\AuthTrait;
 use App\Traits\BusinessTrait;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
@@ -78,28 +79,26 @@ class AuthController extends Controller
         $business = BusinessDetails::first();
 
         if($validated){
-            $code = ActivationCode::all();
-            if($code){
-                foreach ($code as $key) {
+            
                     // if(AuthTrait::unHash($key->code) == $request['code']){
-                        $package = Package::where('id', $code['package_id'])->first();
-                        // update business
-                        $business = BusinessDetails::first();
-                        
-                        $business->expiry_date = strtotime("+$package->duration days", time());
-                        $business->save();
-                        // log_activation
-                        ActivationCodeLog::create([
-                            'activation_code_id' => $key->id,
-                            'business_detail_id'=> $business->id
-                        ]);
-                        $key->delete();
+
+                        //call external endpoint
+                        $activate = Http::retry(100, 3)->post('https://api.ngmkt.site/api/activate-code', ['code' => $request['code']]);
+
+                        $response = $activate->json();
+
+                        if ($response->status === 200) {
+                            // update business
+                            $business = BusinessDetails::first();
+                            $days = $response->data->duration;
+                            $business->expiry_date = strtotime("+$days days", time());
+                            $business->save();
+                        }
+
                         return res_completed('activation successful');
                     // }
                 }
-            }
             return res_bad_request('activation code not usable');
-        }
     }
 
     public function create_bank(Request $request){

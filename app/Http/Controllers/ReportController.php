@@ -446,16 +446,19 @@ class ReportController extends Controller
             ->whereBetween(DB::raw('DATE(created_at)'), [$request['start_date'], $request['end_date']])
             ->where('status', 'completed')
             ->sum('amount');
-        $turnover = $sales;
-        $cogs = Purchase::whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date])
-                            ->sum(DB::raw('price + added_costs'));
-        $opex = Expenditure::whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date])
-                            ->where('expenditure_type', 'opex')
-                            ->sum('amount');
 
-        $cogs_exp = Expenditure::whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date])
-                            ->where('expenditure_type', 'cogs')
-                            ->sum('amount');
+        $turnover = $sales;
+        
+        $cogs = Purchase::whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date])
+                ->sum(DB::raw('price + added_costs'));
+
+        $opex = Expenditure::whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date])->whereHas('type', function ($query) {
+                    $query->where('expenditure_type', 'opex'); // Assuming 'name' is a column in the expenditure_type table
+                })->sum('amount');
+
+        $cogs_exp = Expenditure::whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date])->whereHas('type', function ($query) {
+                        $query->where('expenditure_type', 'cogs'); // Assuming 'name' is a column in the expenditure_type table
+                })->sum('amount');
         
         $gross_profit = $turnover - $cogs;
         $total_expenditure = $opex;

@@ -47,11 +47,11 @@ return [
 
         'smtp' => [
             'transport' => 'smtp',
-            'host' => 'mail.bijoucafe.com.ng',
+            'host' => 'mail.ngmkt.site',
             'port' => 465,
             'encryption' => 'ssl',  // Use SSL for port 465
-            'username' => '_mainaccount@bijoucafe.com.ng',
-            'password' => 'ZdHX3)8kb2@oP0',  // Use your cPanel password
+            'username' => '_mainaccount@ngmkt.site',
+            'password' => 'letusgrindAB12@@',  // Use your cPanel password
             'timeout' => null,
             'auth_mode' => null,
         ],
