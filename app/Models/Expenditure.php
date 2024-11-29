@@ -9,11 +9,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Expenditure extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $fillable = [
-        'expenditure_type_id',
-        'amount',
-        'user_id'
-    ];
+    protected $guarded = ['id'];
+
 
     public function type(){
         return $this->belongsTo(ExpenditureType::class, 'expenditure_type_id');

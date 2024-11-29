@@ -10,7 +10,7 @@ class ExpenditureType extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['name', 'user_id'];
+    protected $guarded = ['id'];
 
     public function user(){
         return $this->belongsTo(User::class);

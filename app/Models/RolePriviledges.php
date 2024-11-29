@@ -8,10 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 class RolePriviledges extends Model
 {
     use HasFactory;
-    protected $fillable = [
-        'role_id',
-        'priviledge_id'
-    ];
+    protected $guarded = ['id'];
+
 
     public function role(){
         return $this->belongsTo(Roles::class);

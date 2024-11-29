@@ -10,7 +10,7 @@ class SubscriptionLog extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['id'];
+    protected $guarded = ['id'];
 
     public function package(){
         return $this->belongsTo(Package::class, 'package_id');

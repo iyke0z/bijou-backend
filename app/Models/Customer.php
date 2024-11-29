@@ -9,13 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Customer extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $fillable = [
-        'fullname',
-        'address',
-        'phone',
-        'email',
-        'wallet_balance',
-    ];
+    protected $guarded = ['id'];
 
     public function transactions(){
         return $this->hasMany(Transaction::class);

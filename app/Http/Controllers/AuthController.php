@@ -83,22 +83,31 @@ class AuthController extends Controller
                     // if(AuthTrait::unHash($key->code) == $request['code']){
 
                         //call external endpoint
-                        $activate = Http::retry(100, 3)->post('https://api.ngmkt.site/api/activate-code', ['code' => $request['code']]);
+                        try {
+                            $activate = Http::retry(3, 100)->post('https://api.ngmkt.site/api/activate-code', [
+                                'code' => $request['code'],
+                                'email' => $business['email']
+                            ]);
+                            $response = $activate->json();
 
-                        $response = $activate->json();
-
-                        if ($response->status === 200) {
-                            // update business
-                            $business = BusinessDetails::first();
-                            $days = $response->data->duration;
-                            $business->expiry_date = strtotime("+$days days", time());
-                            $business->save();
+                            if ($response['status'] === 200) {
+                                // update business
+                                $business = BusinessDetails::first();
+                                $days = $response['data']['duration'];
+                                $business->expiry_date = strtotime("+$days days", time());
+                                $business->save();
+                                return res_completed('activation successful');
+                            }else{
+                                return res_unauthorized($response['message']);
+                            }
+                        } catch (\Throwable $th) {
+                            return res_unauthorized($th->getMessage());
                         }
+                        
 
-                        return res_completed('activation successful');
                     // }
                 }
-            return res_bad_request('activation code not usable');
+                return res_bad_request('activation code not usable');
     }
 
     public function create_bank(Request $request){

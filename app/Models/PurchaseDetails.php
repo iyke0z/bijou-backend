@@ -9,19 +9,15 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class PurchaseDetails extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $fillable = [
-        'purchase_id',
-        'product_id',
-        'qty',
-        'cost',
-    ];
+    protected $guarded = ['id'];
+
 
     public function purchase(){
         return $this->belongsTo(Purchase::class);
     }
 
     public function product(){
-        return $this->belongsTo(Products::class);
+        return $this->belongsTo(Product::class);
     }
 
 }

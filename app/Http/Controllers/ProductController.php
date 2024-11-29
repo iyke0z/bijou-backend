@@ -13,7 +13,7 @@ use App\Http\Resources\CategoryResource;
 use App\Interfaces\ProductRepositoryInterface;
 use App\Models\Category;
 use App\Models\ProductImages;
-use App\Models\Products;
+use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseDetails;
 use Illuminate\Support\Str;
@@ -57,13 +57,13 @@ class ProductController extends Controller
         return $this->productRepo->generate_product_report($validated, $id);
     }
 
-    public function all_products(){
-        $all_products = Products::with('category')->with('images')->orderBy('name', 'ASC')->get();
-        return res_success('all products', $all_products);
+    public function all_Product(){
+        $all_Product = Product::with('category')->with('images')->orderBy('name', 'ASC')->get();
+        return res_success('all Product', $all_Product);
     }
 
     public function general_generate_product_report($id){
-        $report = Products::with('category')->with(
+        $report = Product::with('category')->with(
             ['sales' => function($q) {
                 $q->select('sales.*','users.fullname')->join('users', 'sales.user_id', 'users.id');
             }]
@@ -78,7 +78,7 @@ class ProductController extends Controller
     }
 
     public function all_categories(){
-        $all_categories = Category::with('products')->get();
+        $all_categories = Category::with('Product')->get();
         $categories = [];
         foreach ($all_categories as $category) {
             array_push($categories, new CategoryResource($category));
@@ -90,7 +90,7 @@ class ProductController extends Controller
         $picture = null;
         if($request['image'] != null){
             $picture = Str::slug($request['product_id'], '-').time().'.'.$request['image']->extension();
-            $request['image']->move(public_path('images/products'), $picture);
+            $request['image']->move(public_path('images/Product'), $picture);
         }
         $data = ["product_id"=> $request['product_id'], "image" => $picture];
         ProductImages::create($data);
@@ -126,7 +126,7 @@ class ProductController extends Controller
 
     public function purchase_report(Request $request){
         $all =  Purchase::whereBetween(DB::raw('DATE(`created_at`)'), [$request['start_date'], $request['end_date']])->with('user')->with(['purchase_detail' => function($q) {
-            $q->join('products', 'purchase_details.product_id', 'products.id');
+            $q->join('Product', 'purchase_details.product_id', 'Product.id');
         }])->get();
         return res_success('purchase report', $all);
     }

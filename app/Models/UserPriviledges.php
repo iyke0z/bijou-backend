@@ -8,10 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class UserPriviledges extends Model
 {
     use HasFactory;
-    protected $fillable = [
-        'user_id',
-        'priviledge_id'
-    ];
+    protected $guarded = ['id'];
 
     public function user(){
         return $this->belongsTo(User::class);

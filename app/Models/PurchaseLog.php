@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class PurchaseLog extends Model
 {
     use HasFactory;
-    protected $fillable = ['purchase_detail_id','action','old_price','new_price','old_stock','new_stock', 'user_id'];
+    protected $guarded = ['id'];
 
     public function detail(){
         return $this->belongsTo(PurchaseDetails::class);

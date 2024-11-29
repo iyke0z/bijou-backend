@@ -6,7 +6,7 @@ use App\Interfaces\TransactionRepositoryInterface;
 use App\Models\Customer;
 use App\Models\CustomerDiscount;
 use App\Models\Discount;
-use App\Models\Products;
+use App\Models\Product;
 use App\Models\Sales;
 use App\Models\SplitPayments;
 use App\Models\Transaction;
@@ -64,29 +64,35 @@ class TransactionRepository implements TransactionRepositoryInterface{
             $transaction = new Transaction();
             $transaction->platform = 'online';
             $transaction->user_id = $auth->user_id;
-            $transaction->status =  $transaction->is_order == true ? "pending" : "completed";
-            $transaction->type =  $transaction->is_order == true ? null : "sold";
-            $transaction->amount =  $transaction->is_order == true ? null : $request['amount'];
-            $transaction->payment_method =  $transaction->is_order == true ? null : $request['payment_method'];
+            $transaction->status =  $request['is_order'] == true ? "pending" : "completed";
+            $transaction->type =  $request['is_order'] == true ? null : "sold";
+            $transaction->amount =  $request['is_order'] == true ? null : $request['amount'];
+            $transaction->payment_method =  $request['is_order'] == true ? null : $request['payment_method'];
             $transaction->table_description = $request['description'];
             $transaction->save();
             // create new sales order
 
-            for ($i=0; $i < count($request['products']) ; $i++) {
-                $product = Products::where('id',$request['products'][$i]["product_id"])->first();
+            for ($i=0; $i < count($request['Product']) ; $i++) {
+                $product = Product::where('id',$request['Product'][$i]["product_id"])->first();
                 if($product->category_id == 2){
-                    $product->stock = $product->stock - $request['products'][$i]["qty"];
+                    $product->stock = $product->stock - $request['Product'][$i]["qty"];
                     $product->save();
                 }
 
                 $sale = new Sales();
-                $sale->product_id = $request['products'][$i]["product_id"];
+                $sale->product_id = $request['Product'][$i]["product_id"];
                 $sale->ref = $transaction->id;
-                $sale->price = $request['products'][$i]["price"];
-                $sale->qty = $request['products'][$i]["qty"];
+                $sale->price = $request['Product'][$i]["price"];
+                $sale->qty = $request['Product'][$i]["qty"];
                 $sale->user_id = $auth->user_id;
                 $sale->save();
 
+            }
+
+            if($request['payment_method'] == "wallet" || $request['payment_method'] == 'on_credit'){
+                $customer = Customer::find($request["customer_id"]);
+                $customer->wallet_balance = $customer->wallet_balance - $request["amount"];
+                $customer->save();
             }
             return res_success('sale order created', $sale);
         }
@@ -101,8 +107,8 @@ class TransactionRepository implements TransactionRepositoryInterface{
             // delete
             $sales = Sales::where('ref', $request['ref'])->get();
             foreach ($sales as $sale) {
-                // return qty to products
-                $product = Products::where('id', $sale["product_id"])->first();
+                // return qty to Product
+                $product = Product::where('id', $sale["product_id"])->first();
                 if($product->category_id == 2){
                     $product->stock = $product->stock + $sale["qty"];
                     $product->save();
@@ -112,27 +118,27 @@ class TransactionRepository implements TransactionRepositoryInterface{
             // update
             $transaction = Transaction::find($request['ref']);
             $transaction->update(['table_description' => $request['description']]);
-            for ($i=0; $i < count($request['products']) ; $i++) {
-                $product = Products::where('id',$request['products'][$i]["product_id"])->first();
+            for ($i=0; $i < count($request['Product']) ; $i++) {
+                $product = Product::where('id',$request['Product'][$i]["product_id"])->first();
                 if($product->category_id == 2){
-                    $product->stock = $product->stock - $request['products'][$i]["qty"];
+                    $product->stock = $product->stock - $request['Product'][$i]["qty"];
                     $product->save();
                 }
 
-                $sale = Sales::where("ref", $request['ref'])->where("product_id", $request['products'][$i]["product_id"])->first();
+                $sale = Sales::where("ref", $request['ref'])->where("product_id", $request['Product'][$i]["product_id"])->first();
                 if($sale) {
-                    $sale->product_id = $request['products'][$i]["product_id"];
+                    $sale->product_id = $request['Product'][$i]["product_id"];
                     $sale->ref = $request['ref'];
-                    $sale->price = $request['products'][$i]["price"];
-                    $sale->qty = $request['products'][$i]["qty"];
+                    $sale->price = $request['Product'][$i]["price"];
+                    $sale->qty = $request['Product'][$i]["qty"];
                     $sale->user_id = $auth->user_id;
                     $sale->save();
                 }else{
                     $sale = new Sales();
-                    $sale->product_id = $request['products'][$i]["product_id"];
+                    $sale->product_id = $request['Product'][$i]["product_id"];
                     $sale->ref = $request['ref'];
-                    $sale->price = $request['products'][$i]["price"];
-                    $sale->qty = $request['products'][$i]["qty"];
+                    $sale->price = $request['Product'][$i]["price"];
+                    $sale->qty = $request['Product'][$i]["qty"];
                     $sale->user_id = $auth->user_id;
                     $sale->save();
                 }
@@ -186,8 +192,8 @@ class TransactionRepository implements TransactionRepositoryInterface{
             // delete
             $sales = Sales::where('ref', $request['ref'])->get();
             foreach ($sales as $sale) {
-                // return qty to products
-                $product = Products::where('id', $sale["product_id"])->first();
+                // return qty to Product
+                $product = Product::where('id', $sale["product_id"])->first();
                 if($product->category_id == 2){
                     $product->stock = $product->stock + $sale["qty"];
                     $product->save();

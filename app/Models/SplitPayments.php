@@ -9,7 +9,7 @@ class SplitPayments extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['transaction_id','payment_method','amount', 'bank_id'];
+    protected $guarded = ['id'];
 
     public function transaction(){
         return $this->belongsTo(Transaction::class, 'transaction_id');

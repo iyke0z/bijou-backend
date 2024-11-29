@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class ActivationCodeLog extends Model
 {
     use HasFactory;
-    protected $fillable = ['activation_code_id','business_detail_id'];
+    protected $guarded = ['id'];
 
     public function code(){
         return $this->belongsTo(ActivationCode::class);

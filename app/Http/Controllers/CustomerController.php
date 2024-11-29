@@ -10,6 +10,7 @@ use App\Models\Customer;
 
 class CustomerController extends Controller
 {
+    public $customerRepo;
     public function __construct(CustomerRepositoryInterface $customerRepo){
         $this->customerRepo = $customerRepo;
     }

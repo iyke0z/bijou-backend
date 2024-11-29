@@ -10,12 +10,8 @@ class Discount extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = [
-        'code',
-        'percentage',
-        'count',
-        'expiry_date',
-    ];
+    protected $guarded = ['id'];
+
 
     public function discount(){
         return $this->hasMany(Sales::class);

@@ -10,7 +10,7 @@ class Banks extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['name'];
+    protected $guarded = ['id'];
 
     public function transaction(){
         return $this->hasMany(Transaction::class, 'bank_id');

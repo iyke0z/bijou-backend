@@ -17,7 +17,7 @@ use App\Traits\AuthTrait;
 
 class UserController extends Controller
 {
-
+    public $userRepo;
     public function __construct(UserRepositoryInterface $userRepo)
     {
         $this->userRepo = $userRepo;

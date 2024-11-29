@@ -34,27 +34,18 @@ return [
     */
 
     'mailers' => [
-        // 'smtp' => [
-        //     'transport' => 'smtp',
-        //     'host' => env('MAIL_HOST', 'smtp.mailgun.org'),
-        //     'port' => env('MAIL_PORT', 587),
-        //     'encryption' => env('MAIL_ENCRYPTION', 'tls'),
-        //     'username' => env('MAIL_USERNAME'),
-        //     'password' => env('MAIL_PASSWORD'),
-        //     'timeout' => null,
-        //     'auth_mode' => null,
-        // ],
-
         'smtp' => [
             'transport' => 'smtp',
-            'host' => 'mail.ngmkt.site',
-            'port' => 465,
-            'encryption' => 'ssl',  // Use SSL for port 465
-            'username' => '_mainaccount@ngmkt.site',
-            'password' => 'letusgrindAB12@@',  // Use your cPanel password
+            'host' => env('MAIL_HOST', 'smtp.mailgun.org'),
+            'port' => env('MAIL_PORT', 587),
+            'encryption' => env('MAIL_ENCRYPTION', 'tls'),
+            'username' => env('MAIL_USERNAME'),
+            'password' => env('MAIL_PASSWORD'),
             'timeout' => null,
             'auth_mode' => null,
         ],
+
+        
         
 
         'ses' => [

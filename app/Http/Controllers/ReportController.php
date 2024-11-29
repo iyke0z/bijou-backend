@@ -364,6 +364,9 @@ class ReportController extends Controller
             $report = Expenditure::select(DB::raw('date(created_at) as request_date'), 
                 DB::raw('SUM(amount) as total_amount')   // Sum the amount per day
             )->whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date])
+            ->whereHas('type', function ($query) {
+                $query->where('expenditure_type', 'opex'); // Assuming 'name' is a column in the expenditure_type table
+        })
                                 ->with('type')->with('user')
                                 ->groupBy('request_date') // Group by the extracted date
                                 ->orderBy('request_date') // 
@@ -389,28 +392,27 @@ class ReportController extends Controller
 
         if($validated){
             $report = Purchase::select(DB::raw('date(created_at) as purchase_date'), 
-                DB::raw('SUM(price) as total_amount'), DB::raw('SUM(added_costs) as other_cogs')   // Sum the amount per day
-            )->whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date])
+                                DB::raw('SUM(price) as total_amount'), DB::raw('SUM(added_costs) as other_cogs')   // Sum the amount per day
+                                )->whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date])
                                 ->groupBy('purchase_date') // Group by the extracted date
                                 ->orderBy('purchase_date') // 
                                 ->get();
             return res_success('cogs', $report);
 
+        }
     }
-}
-
 
     public function getPaymentMethodPerformance(Request $request){
         $methods = ['cash', 'transfer', 'card', 'wallet', 'on_credit', 'pos', 'split', "complementary"];
         $payment_method_distr = [];
         foreach ($methods as $key => $method) {
             $sales = Transaction::where('type', 'sold')
-            ->whereBetween(DB::raw('DATE(created_at)'), [$request['start_date'], $request['end_date']])
-            ->where('status', 'completed')
-            ->where('payment_method', $method)
-            ->sum('amount');
+                        ->whereBetween(DB::raw('DATE(created_at)'), [$request['start_date'], $request['end_date']])
+                        ->where('status', 'completed')
+                        ->where('payment_method', $method)
+                        ->sum('amount');
 
-            $payment_method_distr[$method][] =  $sales;
+                        $payment_method_distr[$method][] =  $sales;
         }
         
 

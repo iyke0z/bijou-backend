@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Priviledges extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $fillable = ['name'];
+    protected $guarded = ['id'];
 
     public function user_priviledges(){
         return $this->hasMany(UserPriviledges::class);
