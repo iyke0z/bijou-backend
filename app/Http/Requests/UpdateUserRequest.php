@@ -31,7 +31,7 @@ class UpdateUserRequest extends FormRequest
             "phone" => 'required',
             "address" => 'required',
             "role_id" => 'nullable',
-            "password"=>'nullabe',
+            "password" => 'nullable',
             'dob'=>'required',
             'picture'=>'sometimes',
             'gender'=>'required'

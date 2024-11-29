@@ -72,18 +72,18 @@ class TransactionRepository implements TransactionRepositoryInterface{
             $transaction->save();
             // create new sales order
 
-            for ($i=0; $i < count($request['Product']) ; $i++) {
-                $product = Product::where('id',$request['Product'][$i]["product_id"])->first();
+            for ($i=0; $i < count($request['products']) ; $i++) {
+                $product = Product::where('id',$request['products'][$i]["product_id"])->first();
                 if($product->category_id == 2){
-                    $product->stock = $product->stock - $request['Product'][$i]["qty"];
+                    $product->stock = $product->stock - $request['products'][$i]["qty"];
                     $product->save();
                 }
 
                 $sale = new Sales();
-                $sale->product_id = $request['Product'][$i]["product_id"];
+                $sale->product_id = $request['products'][$i]["product_id"];
                 $sale->ref = $transaction->id;
-                $sale->price = $request['Product'][$i]["price"];
-                $sale->qty = $request['Product'][$i]["qty"];
+                $sale->price = $request['products'][$i]["price"];
+                $sale->qty = $request['products'][$i]["qty"];
                 $sale->user_id = $auth->user_id;
                 $sale->save();
 
@@ -118,27 +118,27 @@ class TransactionRepository implements TransactionRepositoryInterface{
             // update
             $transaction = Transaction::find($request['ref']);
             $transaction->update(['table_description' => $request['description']]);
-            for ($i=0; $i < count($request['Product']) ; $i++) {
-                $product = Product::where('id',$request['Product'][$i]["product_id"])->first();
+            for ($i=0; $i < count($request['products']) ; $i++) {
+                $product = Product::where('id',$request['products'][$i]["product_id"])->first();
                 if($product->category_id == 2){
-                    $product->stock = $product->stock - $request['Product'][$i]["qty"];
+                    $product->stock = $product->stock - $request['products'][$i]["qty"];
                     $product->save();
                 }
 
-                $sale = Sales::where("ref", $request['ref'])->where("product_id", $request['Product'][$i]["product_id"])->first();
+                $sale = Sales::where("ref", $request['ref'])->where("product_id", $request['products'][$i]["product_id"])->first();
                 if($sale) {
-                    $sale->product_id = $request['Product'][$i]["product_id"];
+                    $sale->product_id = $request['products'][$i]["product_id"];
                     $sale->ref = $request['ref'];
-                    $sale->price = $request['Product'][$i]["price"];
-                    $sale->qty = $request['Product'][$i]["qty"];
+                    $sale->price = $request['products'][$i]["price"];
+                    $sale->qty = $request['products'][$i]["qty"];
                     $sale->user_id = $auth->user_id;
                     $sale->save();
                 }else{
                     $sale = new Sales();
-                    $sale->product_id = $request['Product'][$i]["product_id"];
+                    $sale->product_id = $request['products'][$i]["product_id"];
                     $sale->ref = $request['ref'];
-                    $sale->price = $request['Product'][$i]["price"];
-                    $sale->qty = $request['Product'][$i]["qty"];
+                    $sale->price = $request['products'][$i]["price"];
+                    $sale->qty = $request['products'][$i]["qty"];
                     $sale->user_id = $auth->user_id;
                     $sale->save();
                 }

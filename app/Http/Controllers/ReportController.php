@@ -428,7 +428,7 @@ class ReportController extends Controller
             'end_date' => 'required'
         ]);
         $sales = Transaction::where('type', 'sold')
-                    ->whereBetween(DB::raw('created_at'), [$request['start_date'], $request['end_date']])
+                    ->whereBetween(DB::raw('DATE(created_at)'), [$request['start_date'], $request['end_date']])
                     ->where('status', 'completed')
                     ->sum('amount');
 
