@@ -391,13 +391,47 @@ class ReportController extends Controller
         ]);
 
         if($validated){
-            $report = Purchase::select(DB::raw('date(created_at) as purchase_date'), 
-                                DB::raw('SUM(price) as total_amount'), DB::raw('SUM(added_costs) as other_cogs')   // Sum the amount per day
-                                )->whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date])
-                                ->groupBy('purchase_date') // Group by the extracted date
-                                ->orderBy('purchase_date') // 
-                                ->get();
-            return res_success('cogs', $report);
+        // Fetching reports
+        $report = Purchase::select(
+                DB::raw('DATE(created_at) as purchase_date'),
+                DB::raw('SUM(price) as total_amount'),
+                DB::raw('SUM(added_costs) as other_cogs')
+            )
+            ->whereBetween(DB::raw('DATE(created_at)'), [$start_date, $end_date])
+            ->groupBy('purchase_date')
+            ->orderBy('purchase_date')
+            ->get();
+
+        // Fetching expenditures
+        $cogs_exp = Expenditure::select(
+                DB::raw('DATE(created_at) as purchase_date'),
+                DB::raw('SUM(amount) as total_amount')
+            )
+            ->whereBetween(DB::raw('DATE(created_at)'), [$start_date, $end_date])
+            ->whereHas('type', function ($query) {
+                $query->where('expenditure_type', 'cogs');
+            })
+            ->groupBy('purchase_date')
+            ->orderBy('purchase_date')
+            ->get();
+
+        // Merge both collections
+        $merged = $report->concat($cogs_exp);
+
+        // Group by purchase_date and sum the amounts
+        $finalReport = $merged->groupBy('purchase_date')->map(function ($group) {
+            return [
+                'purchase_date' => $group->first()->purchase_date,
+                'total_amount' => $group->sum('total_amount'),
+                'other_cogs' => $group->sum('other_cogs'), // This field will default to 0 for expenditures
+            ];
+        });
+
+        // Convert back to a collection or output it
+        $finalReport = $finalReport->values();
+
+                  
+            return res_success('cogs', $finalReport);
 
         }
     }
@@ -462,9 +496,9 @@ class ReportController extends Controller
                         $query->where('expenditure_type', 'cogs'); // Assuming 'name' is a column in the expenditure_type table
                 })->sum('amount');
         
-        $gross_profit = $turnover - $cogs;
-        $total_expenditure = $opex;
-        $net_profit = $gross_profit - $total_expenditure;
+        $gross_profit = $turnover - ($cogs + $cogs_exp);
+        $total_expenditure = $opex + $cogs + $cogs_exp;
+        $net_profit = $turnover - $total_expenditure;
         $gross_profit_margin = $turnover > 0 ? ($gross_profit/$turnover) * 100 :0;
         $net_profit_margin = $turnover > 0 ? ($net_profit/$turnover) * 100 : 0;
 

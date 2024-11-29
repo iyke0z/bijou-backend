@@ -2,14 +2,14 @@
 namespace App\Traits;
 
 use App\Models\ProductLog;
-use App\Models\Products;
+use App\Models\Product;
 use App\Models\PurchaseDetails;
 use App\Models\PurchaseLog;
 
 trait ProductTrait{
 
     public static function log_product($productid, $action, $stock, $price, $user){
-        $product = Products::find($productid);
+        $product = Product::find($productid);
         if($product->exists()){
             // logprodcut
            ProductLog::create(

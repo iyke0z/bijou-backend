@@ -4,7 +4,7 @@ namespace App\Repositories;
 
 use App\Interfaces\ProductRepositoryInterface;
 use App\Models\Category;
-use App\Models\Products;
+use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseDetails;
 use App\Traits\ProductTrait;
@@ -55,13 +55,13 @@ class ProductRepository implements ProductRepositoryInterface{
     public function create_product($request){
         $already_exists = [];
         for ($i=0; $i < count($request['products']) ; $i++) {
-            $check = Products::where('name', strtolower($request['products'][$i]['name']))
+            $check = Product::where('name', strtolower($request['products'][$i]['name']))
                     ->where('category_id', $request['products'][$i]['category_id'])
                     ->where('code', $request['products'][$i]["code"])
                     ->first();
             if (!$check) {
                 // create category
-                Products::create(
+                Product::create(
                     ["name" => $request['products'][$i]["name"],
                     "category_id" => $request['products'][$i]["category_id"],
                     "stock" => $request['products'][$i]["stock"],
@@ -80,10 +80,10 @@ class ProductRepository implements ProductRepositoryInterface{
     }
 
     public function update_product($request, $id){
-        $product = Products::find($id);
+        $product = Product::find($id);
         if($product->exists()){
             // checkifCodeExists
-            $product_code = Products::where('code', $request['code'])
+            $product_code = Product::where('code', $request['code'])
                             ->where('id', '!=', $id)->first();
             // if(!$product_code){
                 // update
@@ -107,14 +107,14 @@ class ProductRepository implements ProductRepositoryInterface{
     }
 
     public function delete_product($id){
-        Products::findOrFail($id)->delete();
+        Product::findOrFail($id)->delete();
         return res_completed('deleted');
     }
 
     public function generate_product_report($request, $id){
         $start_date = $request['start_date'];
         $end_date = $request['end_date'];
-        $report = Products::with('category')->with(
+        $report = Product::with('category')->with(
             ['sales' => function($q) use ($start_date, $end_date){
                 $q->select('sales.*','users.fullname')
                 ->join('users', 'sales.user_id', 'users.id')
@@ -149,7 +149,7 @@ class ProductRepository implements ProductRepositoryInterface{
             array_push($totalPrice, $request['purchase'][$i]['qty']*$request['purchase'][$i]['cost']);
             $purchase;
             // update product table
-            $product = Products::find($request['purchase'][$i]["product_id"]);
+            $product = Product::find($request['purchase'][$i]["product_id"]);
             if($product->exists()){
                 ProductTrait::log_product($product->id, 'purchase', $request['purchase'][$i]['qty'], $request['purchase'][$i]['cost'], $user);
                 $product->stock = $product->stock + $request['purchase'][$i]['qty'];
@@ -180,7 +180,7 @@ class ProductRepository implements ProductRepositoryInterface{
             if ($single_purchase->exists()) {
                 // get product and remove old stock
                 // update product table
-                $product = Products::find($request['purchase'][$i]["product_id"]);
+                $product = Product::find($request['purchase'][$i]["product_id"]);
                 if($product->exists()){
                     $product->stock = $product->stock  - $single_purchase->qty;
                     $product->out_of_stock = 0;
@@ -199,7 +199,7 @@ class ProductRepository implements ProductRepositoryInterface{
 
                 array_push($totalPrice, $request['purchase'][$i]['qty']*$request['purchase'][$i]['cost']);
                 // get product and update stock
-                $product = Products::find($request['purchase'][$i]["product_id"]);
+                $product = Product::find($request['purchase'][$i]["product_id"]);
                 if($product->exists()){
                     // log product
                     ProductTrait::log_product($product->id, 'purchase_update', $request['purchase'][$i]['qty'], $request['purchase'][$i]['cost'], $user);
@@ -223,7 +223,7 @@ class ProductRepository implements ProductRepositoryInterface{
                     "cost"=>$request['new_purchase'][$i]['cost']
                 ]);
                 // update product table
-                $product = Products::find($request['new_purchase'][$i]["product_id"]);
+                $product = Product::find($request['new_purchase'][$i]["product_id"]);
                 if($product->exists()){
                     $product->stock = $product->stock + $request['new_purchase'][$i]['qty'];
                     // $product->price = $product->price + $request['purchase'][$i]['cost'];
@@ -253,7 +253,7 @@ class ProductRepository implements ProductRepositoryInterface{
         $purchase->save();
         // getProduct and reduce stock
         // update product table
-        $product = Products::find($detail->product_id);
+        $product = Product::find($detail->product_id);
         if($product->exists()){
             $product->stock = $product->stock  - $detail->qty;
             // $product->price = $product->price + $request['purchase'][$i]['cost'];

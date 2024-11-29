@@ -57,9 +57,9 @@ class ProductController extends Controller
         return $this->productRepo->generate_product_report($validated, $id);
     }
 
-    public function all_Product(){
+    public function all_Products(){
         $all_Product = Product::with('category')->with('images')->orderBy('name', 'ASC')->get();
-        return res_success('all Product', $all_Product);
+        return res_success('all products', $all_Product);
     }
 
     public function general_generate_product_report($id){
@@ -78,7 +78,7 @@ class ProductController extends Controller
     }
 
     public function all_categories(){
-        $all_categories = Category::with('Product')->get();
+        $all_categories = Category::with('products')->get();
         $categories = [];
         foreach ($all_categories as $category) {
             array_push($categories, new CategoryResource($category));
@@ -90,7 +90,7 @@ class ProductController extends Controller
         $picture = null;
         if($request['image'] != null){
             $picture = Str::slug($request['product_id'], '-').time().'.'.$request['image']->extension();
-            $request['image']->move(public_path('images/Product'), $picture);
+            $request['image']->move(public_path('images/product'), $picture);
         }
         $data = ["product_id"=> $request['product_id'], "image" => $picture];
         ProductImages::create($data);
@@ -125,9 +125,12 @@ class ProductController extends Controller
     }
 
     public function purchase_report(Request $request){
-        $all =  Purchase::whereBetween(DB::raw('DATE(`created_at`)'), [$request['start_date'], $request['end_date']])->with('user')->with(['purchase_detail' => function($q) {
-            $q->join('Product', 'purchase_details.product_id', 'Product.id');
-        }])->get();
+        $all =  Purchase::whereBetween(DB::raw('DATE(`created_at`)'), [$request['start_date'], $request['end_date']])
+        ->with('user')
+        ->with(['purchase_detail' => function($q) {
+            $q->join('products', 'purchase_details.product_id', 'products.id');
+        }])
+        ->get();
         return res_success('purchase report', $all);
     }
 
