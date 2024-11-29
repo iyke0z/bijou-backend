@@ -9,11 +9,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Sales extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $guarded = [
-'id'    ];
+    protected $guarded = ['id'];
 
     public function product(){
-        return $this->belongsTo(Products::class);
+        return $this->belongsTo(Product::class);
     }
 
     public function user(){

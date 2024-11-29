@@ -28,7 +28,7 @@ class ReportController extends Controller
         ]);
 
         if($validated){
-                $getTransactions = Transaction::whereBetween(DB::raw('DATE(`created_at`)'),  [$start_date, $end_date])
+                $getTransactions = Transaction::whereBetween(DB::raw('created_at'),  [$start_date, $end_date])
                                     ->with('customer')
                                     ->with(['user' => function ($q) {
                                         $q->withTrashed();
@@ -38,17 +38,16 @@ class ReportController extends Controller
                                     }])
                                     ->orderBy('id', 'desc')
                                     ->withTrashed()->get();
-
                 
                 $get_sales = Sales::join('transactions', 'sales.ref', 'transactions.id')
                                 ->whereBetween(DB::raw('DATE(sales.created_at)'),  [$start_date, $end_date])
                                 ->where('transactions.status', '!=', 'cancelled')
                                 ->with('product')->with('user')->get();
             
-                $get_purchases = PurchaseDetails::whereBetween(DB::raw('DATE(`created_at`)'), [$start_date, $end_date])
+                $get_purchases = PurchaseDetails::whereBetween(DB::raw('created_at'), [$start_date, $end_date])
                                     ->with('purchase')->with('product')->get();
 
-                $get_expenditures = Expenditure::whereBetween(DB::raw('DATE(`created_at`)'), [$start_date, $end_date])
+                $get_expenditures = Expenditure::whereBetween(DB::raw('created_at'), [$start_date, $end_date])
                                     ->with('type')->with('user')->get();
 
             $report = [
@@ -57,9 +56,7 @@ class ReportController extends Controller
                 'purchases' => $get_purchases,
                 'expenditures' => $get_expenditures
             ];
-
             return res_success('report', $report);
-
         }
 
     }
@@ -73,14 +70,14 @@ class ReportController extends Controller
         ]);
 
         if($validated){
-            $getTransactions = Transaction::whereBetween(DB::raw('DATE(`created_at`)'),  [$start_date, $end_date])
+            $getTransactions = Transaction::whereBetween(DB::raw('created_at'),  [$start_date, $end_date])
                                 ->where('type', 'cancelled')
                                 ->with('customer')
                                 ->with(['sales' => function($q){
                                     $q->join('products', 'sales.product_id', 'products.id');
                                 }])->get();
 
-            $get_sales = Sales::whereBetween(DB::raw('DATE(`created_at`)'), [$start_date, $end_date])
+            $get_sales = Sales::whereBetween(DB::raw('created_at'), [$start_date, $end_date])
             ->where('type', 'cancelled')
             ->with('product')
             ->with('user')->get();
@@ -106,113 +103,65 @@ class ReportController extends Controller
         ]);
 
         if ($validated) {
-            // get transactions between 6am the previous day - 4am today
-            $transactions_today = Transaction::where(DB::raw('DATE(`created_at`)'),  $start_date)
-            ->where(DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), ">=", "06:00")->where('user_id', $user)->sum("amount");
-
-            $transactions_next_day = Transaction::where(DB::raw('DATE(`created_at`)'),  $end_date)
-            ->where(DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")->where('user_id', $user)->sum("amount");
-
-            // get sales between 6am the previous day and 4am today
-            $sales_today = Sales::select(DB::raw('sum(price * qty) as  amount'))->join('transactions', 'sales.ref', 'transactions.id')->where('transactions.user_id', $user)->where(DB::raw('DATE(sales.created_at)'),  $start_date)
-            ->where(DB::raw('DATE_FORMAT(sales.created_at,"%H:%i")'), ">=", "06:00")->get();
-            $sales_today= $sales_today[0]['amount'];
-            $sales_next_day = Sales::select(DB::raw('sum(price * qty) as  amount'))->join('transactions', 'sales.ref', 'transactions.id')->where('transactions.user_id', $user)->where(DB::raw('DATE("sales.created_at")'),  $end_date)
-            ->where(DB::raw('DATE_FORMAT(sales.created_at,"%H:%i")'), "<=", "05:00")->get();
-            $sales_next_day= $sales_next_day[0]['amount'];
-
-            //get transactions paid with cash
-            $cash_today =  Transaction::where(DB::raw('DATE(`created_at`)'),  $start_date)
-            ->where(DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), ">=", "06:00")->where('user_id', $user)->where("payment_method", "cash")->sum("amount");
-
-            $cash_next_day = Transaction::where(DB::raw('DATE(`created_at`)'),  $end_date)
-            ->where(DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")->where('user_id', $user)->where("payment_method", "cash")->sum("amount");
-
-            //get transactions paid with card
-            $card_today =  Transaction::where(DB::raw('DATE(`created_at`)'),  $start_date)
-            ->where(DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), ">=", "06:00")->where('user_id', $user)->where("payment_method", "card")->sum("amount");
-
-            $card_next_day = Transaction::where(DB::raw('DATE(`created_at`)'),  $end_date)
-            ->where(DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")->where('user_id', $user)->where("payment_method", "card")->sum("amount");
-
-            //get transactions paid with transfer
-            $transfer_today =  Transaction::where(DB::raw('DATE(`created_at`)'),  $start_date)
-            ->where(DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), ">=", "06:00")->where('user_id', $user)->where("payment_method", "transfer")->sum("amount");
-
-            $transfer_next_day = Transaction::where(DB::raw('DATE(`created_at`)'),  $end_date)
-            ->where(DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")->where('user_id', $user)->where("payment_method", "transfer")->sum("amount");
-
-             //get transactions paid with split
-             $split_today =  Transaction::where(DB::raw('DATE(`created_at`)'),  $start_date)
-             ->where(DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), ">=", "06:00")->where('user_id', $user)->where("payment_method", "split")->sum("amount");
-
-             $split_next_day = Transaction::where(DB::raw('DATE(`created_at`)'),  $end_date)
-             ->where(DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")->where('user_id', $user)->where("payment_method", "split")->sum("amount");
-
-             $split_payment_card_today = SplitPayments::select('split_payments.*')->join('transactions', 'split_payments.transaction_id', 'transactions.id')->where('transactions.user_id', $user)->where(DB::raw('DATE(split_payments.created_at)'),  $start_date)
-             ->where(DB::raw('DATE_FORMAT(split_payments.created_at,"%H:%i")'), ">=", "06:00")->where("split_payments.payment_method", "card")->sum("split_payments.amount");
-             $split_payment_card_next = SplitPayments::select('split_payments.*')->join('transactions', 'split_payments.transaction_id', 'transactions.id')->where('transactions.user_id', $user)->where(DB::raw('DATE(split_payments.created_at)'),  $end_date)
-             ->where(DB::raw('DATE_FORMAT(split_payments.created_at,"%H:%i")'), "<=", "05:00")->where("split_payments.payment_method", "card")->sum("split_payments.amount");
-             $split_payment_cash_today = SplitPayments::select('split_payments.*')->join('transactions', 'split_payments.transaction_id', 'transactions.id')->where('transactions.user_id', $user)->where(DB::raw('DATE(split_payments.created_at)'),  $start_date)
-             ->where(DB::raw('DATE_FORMAT(split_payments.created_at,"%H:%i")'), ">=", "06:00")->where("split_payments.payment_method", "cash")->sum("split_payments.amount");
-             $split_payment_cash_next = SplitPayments::select('split_payments.*')->join('transactions', 'split_payments.transaction_id', 'transactions.id')->where('transactions.user_id', $user)->where(DB::raw('DATE(split_payments.created_at)'),  $end_date)
-             ->where(DB::raw('DATE_FORMAT(split_payments.created_at,"%H:%i")'), "<=", "05:00")->where("split_payments.payment_method", "cash")->sum("split_payments.amount");
-             $split_payment_transfer_today = SplitPayments::select('split_payments.*')->join('transactions', 'split_payments.transaction_id', 'transactions.id')->where('transactions.user_id', $user)->where(DB::raw('DATE(split_payments.created_at)'),  $start_date)
-             ->where(DB::raw('DATE_FORMAT(split_payments.created_at,"%H:%i")'), ">=", "06:00")->where("split_payments.payment_method", "transfer")->sum("split_payments.amount");
-             $split_payment_transfer_next = SplitPayments::select('split_payments.*')->join('transactions', 'split_payments.transaction_id', 'transactions.id')->where('transactions.user_id', $user)->where(DB::raw('DATE(split_payments.created_at)'),  $end_date)
-             ->where(DB::raw('DATE_FORMAT(split_payments.created_at,"%H:%i")'), "<=", "05:00")->where("split_payments.payment_method", "transfer")->sum("split_payments.amount");
-
-             //bank payment received
-             $banks = Banks::get();
-             $bank_sales = array();
-             foreach ($banks as $bank) {
-                $card__banktoday =  Transaction::where(DB::raw('DATE(`created_at`)'),  $start_date)
-                ->where(DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), ">=", "06:00")->where('user_id', $user)->where("payment_method", "card")->where('bank_id', $bank['id'])->sum("amount");
-
-                $card_bank_next_day = Transaction::where(DB::raw('DATE(`created_at`)'),  $end_date)
-                ->where(DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")->where('user_id', $user)->where("payment_method", "card")->where('bank_id', $bank['id'])->sum("amount");
-
-                $split_payment_bank_card_today = SplitPayments::select('split_payments.*')->join('transactions', 'split_payments.transaction_id', 'transactions.id')->where('transactions.user_id', $user)->where(DB::raw('DATE(split_payments.created_at)'),  $start_date)
-                ->where(DB::raw('DATE_FORMAT(split_payments.created_at,"%H:%i")'), ">=", "06:00")->where("split_payments.payment_method", "card")->where('split_payments.bank_id', $bank['id'])->sum("split_payments.amount");
-                $split_payment_bank_card_next = SplitPayments::select('split_payments.*')->join('transactions', 'split_payments.transaction_id', 'transactions.id')->where('transactions.user_id', $user)->where(DB::raw('DATE(split_payments.created_at)'),  $end_date)
-                ->where(DB::raw('DATE_FORMAT(split_payments.created_at,"%H:%i")'), "<=", "05:00")->where("split_payments.payment_method", "card")->where('split_payments.bank_id', $bank['id'])->sum("split_payments.amount");
-
-                array_push($bank_sales, [
-                    "bank_name" => $bank['name'],
-                    'amount' => $card__banktoday +  $card_bank_next_day +  $split_payment_bank_card_today + $split_payment_bank_card_next
-                ]);
-             }
-
-             // get comlementary
-            $complementary_today = Transaction::where(DB::raw('DATE(`created_at`)'),  $start_date)
-            ->where(DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), ">=", "06:00")->where('user_id', $user)->where("payment_method", "complementary")->sum("amount");
-
-
-            $complementary_next = Transaction::where(DB::raw('DATE(`created_at`)'),  $end_date)
-            ->where(DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")->where('user_id', $user)->where("payment_method", "complementary")->sum("amount");
-
-            $oustanding = Transaction::where(DB::raw('DATE(`created_at`)'),  $end_date)->where('user_id', $user)->with("sales")
-            ->where(DB::raw('DATE_FORMAT(`created_at`,"%H:%i")'), "<=", "05:00")->where('status', 'pending')->with("split")->get();
-
-
+            // Fetch transactions within the given date range
+            $transactions = Transaction::whereBetween(DB::raw('created_at'), [$start_date, $end_date])
+                ->where('user_id', $user)
+                ->get();
+        
+            // Calculate total amounts for all payment methods
+            $total_paid = $transactions->sum("amount");
+        
+            $cash_total = $transactions->where("payment_method", "cash")->sum("amount");
+            $card_total = $transactions->where("payment_method", "card")->sum("amount");
+            $transfer_total = $transactions->where("payment_method", "transfer")->sum("amount");
+            $split_total = $transactions->where("payment_method", "split")->sum("amount");
+            $complementary_total = $transactions->where("payment_method", "complementary")->sum("amount");
+        
+            // Fetch split payment details
+            $split_payments = SplitPayments::select('split_payments.*')
+                ->join('transactions', 'split_payments.transaction_id', 'transactions.id')
+                ->whereBetween(DB::raw('split_payments.created_at'), [$start_date, $end_date])
+                ->where('transactions.user_id', $user)
+                ->get();
+        
+            $split_payment_card = $split_payments->where("payment_method", "card")->sum("amount");
+            $split_payment_cash = $split_payments->where("payment_method", "cash")->sum("amount");
+            $split_payment_transfer = $split_payments->where("payment_method", "transfer")->sum("amount");
+        
+            // Fetch sales within the given date range
+            $sales = Sales::select(DB::raw('sum(price * qty) as amount'))
+                ->join('transactions', 'sales.ref', 'transactions.id')
+                ->where('transactions.user_id', $user)
+                ->whereBetween(DB::raw('sales.created_at'), [$start_date, $end_date])
+                ->first();
+        
+            $total_sales = $sales->amount ?? 0;
+        
+            // Fetch outstanding transactions
+            $outstanding = Transaction::whereBetween(DB::raw('created_at'), [$start_date, $end_date])
+                ->where('user_id', $user)
+                ->where('status', 'pending')
+                ->with('sales', 'split')
+                ->get();
+        
+            // Summarize the data
             $summary = [
-                "expected_amount" => $this->getVat($sales_today + $sales_next_day),
-                "paid_amount" => $transactions_today + $transactions_next_day ,
-                "cash" => $cash_today + $cash_next_day + $split_payment_cash_next + $split_payment_cash_today,
-                "card" => $card_today + $card_next_day + $split_payment_card_next + $split_payment_card_today,
-                "transfer" =>$transfer_today + $transfer_next_day + $split_payment_transfer_today + $split_payment_transfer_next,
-                "split_payments" =>$split_today + $split_next_day,
-                "split_payments_card" => $split_payment_card_today + $split_payment_card_next,
-                "split_payments_transfer" => $split_payment_transfer_today + $split_payment_transfer_next,
-                "split_payments_cash" => $split_payment_cash_today + $split_payment_cash_next,
-                "banks" =>$bank_sales,
-                "complementary" => $complementary_today + $complementary_next,
-                "outsanding" => $oustanding
+                "expected_amount" => $this->getVat($total_sales),
+                "paid_amount" => $total_paid,
+                "cash" => $cash_total + $split_payment_cash,
+                "card" => $card_total + $split_payment_card,
+                "transfer" => $transfer_total + $split_payment_transfer,
+                "split_payments" => $split_total,
+                "split_payments_card" => $split_payment_card,
+                "split_payments_transfer" => $split_payment_transfer,
+                "split_payments_cash" => $split_payment_cash,
+                "complementary" => $complementary_total,
+                "outstanding" => $outstanding
             ];
-
+        
             return res_success('report', $summary);
-
         }
+        
     }
     public function generate_report(Request $request){
         $start_date  = $request['start_date']; //start at 6:00am
@@ -479,20 +428,20 @@ class ReportController extends Controller
             'end_date' => 'required'
         ]);
         $sales = Transaction::where('type', 'sold')
-            ->whereBetween(DB::raw('DATE(created_at)'), [$request['start_date'], $request['end_date']])
-            ->where('status', 'completed')
-            ->sum('amount');
+                    ->whereBetween(DB::raw('created_at'), [$request['start_date'], $request['end_date']])
+                    ->where('status', 'completed')
+                    ->sum('amount');
 
         $turnover = $sales;
         
-        $cogs = Purchase::whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date])
+        $cogs = Purchase::whereBetween(DB::raw('DATE(created_at)'), [$start_date, $end_date])
                 ->sum(DB::raw('price + added_costs'));
 
-        $opex = Expenditure::whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date])->whereHas('type', function ($query) {
+        $opex = Expenditure::whereBetween(DB::raw('DATE(created_at)'), [$start_date, $end_date])->whereHas('type', function ($query) {
                     $query->where('expenditure_type', 'opex'); // Assuming 'name' is a column in the expenditure_type table
                 })->sum('amount');
 
-        $cogs_exp = Expenditure::whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date])->whereHas('type', function ($query) {
+        $cogs_exp = Expenditure::whereBetween(DB::raw('DATE(created_at)'), [$start_date, $end_date])->whereHas('type', function ($query) {
                         $query->where('expenditure_type', 'cogs'); // Assuming 'name' is a column in the expenditure_type table
                 })->sum('amount');
         

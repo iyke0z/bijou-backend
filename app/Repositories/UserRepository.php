@@ -56,6 +56,7 @@ class UserRepository implements UserRepositoryInterface{
                 "phone" => $request['phone'],
                 "address" => $request['address'],
                 "role_id" => $request['role_id'],
+                "password"=>Hash::make($request['password']),
                 'dob'=>$request['dob'],
                 'picture'=>!is_string($request['picture']) ? $picture: $request['picture'],
                 'gender'=>$request['gender']
