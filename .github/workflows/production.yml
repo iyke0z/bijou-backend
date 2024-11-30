@@ -22,7 +22,8 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: ${{ secrets.FTP_PATH }}/enterprise/api/  # Remote directory on cPanel
-          protocol: ftp
+          protocol: ftps
+          ftps: explicit
           port: 21
 
       # Deploy folder2
@@ -33,7 +34,8 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: ${{ secrets.FTP_PATH }}/edzain/api/  # Remote directory on cPanel
-          protocol: ftp
+          protocol: ftps
+          ftps: explicit
           port: 21
 
       # Deploy folder3
@@ -44,5 +46,6 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: ${{ secrets.FTP_PATH }}/chosenconcept/api/  # Remote directory on cPanel
-          protocol: ftp
+          protocol: ftps
+          ftps: explicit
           port: 21
