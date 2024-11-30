@@ -24,8 +24,12 @@ jobs:
           server-dir: ${{ secrets.FTP_PATH }}/enterprise/api/  # Temporary test directory
           port: 21
           local-dir: ./test-file/  # Directory containing a test file
-          transfer-mode: passive  # Ensure Passive mode is used
-          debug: true  # Enable verbose logging to see connection details
+          protocol: ftp
+          log-level: verbose  # Enable detailed logging for troubleshooting
+          dry-run: false       # Set to true if you want to test before actual deployment
+          exclude: |
+            **/.git*
+            **/node_modules/**
 
       # Cleanup test directory (optional)
       - name: Cleanup Test Directory
