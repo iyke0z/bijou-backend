@@ -65,9 +65,9 @@ class TransactionRepository implements TransactionRepositoryInterface{
             $transaction->platform = 'online';
             $transaction->user_id = $auth->user_id;
             $transaction->status =  $request['is_order'] == true ? "pending" : "completed";
-            $transaction->type =  $request['is_order'] == true ? null : "sold";
-            $transaction->amount =  $request['is_order'] == true ? null : $request['amount'];
-            $transaction->payment_method =  $request['is_order'] == true ? null : $request['payment_method'];
+            $request['is_order'] == false ? $transaction->type = "sold" : null;
+            $request['is_order'] == false ? $transaction->amount  = $request['amount'] : null;
+            $request['is_order'] == false ? $transaction->payment_method = $request['payment_method'] : null;
             $transaction->table_description = $request['description'];
             $transaction->save();
             // create new sales order
@@ -86,7 +86,6 @@ class TransactionRepository implements TransactionRepositoryInterface{
                 $sale->qty = $request['products'][$i]["qty"];
                 $sale->user_id = $auth->user_id;
                 $sale->save();
-
             }
 
             if($request['payment_method'] == "wallet" || $request['payment_method'] == 'on_credit'){
