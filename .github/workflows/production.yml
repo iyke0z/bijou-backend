@@ -22,6 +22,18 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: ${{ secrets.FTP_PATH }}/enterprise/api/  # Remote directory on cPanel
+          passive: true
+          protocol: ftp
+          port: 21
+          exclude: |
+          
+                    **/.git*
+          
+                    **/.git*/**
+          
+                    **/node_modules/**
+          
+                    **/vendor/**
 
       # Deploy folder2
       - name: Deploy Folder2 to cPanel
@@ -31,6 +43,18 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: ${{ secrets.FTP_PATH }}/edzain/api/  # Remote directory on cPanel
+          passive: true
+          protocol: ftp
+          port: 21
+          exclude: |
+          
+                    **/.git*
+          
+                    **/.git*/**
+          
+                    **/node_modules/**
+          
+                    **/vendor/**
 
       # Deploy folder3
       - name: Deploy Folder3 to cPanel
@@ -40,3 +64,15 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: ${{ secrets.FTP_PATH }}/chosenconcept/api/  # Remote directory on cPanel
+          passive: true
+          protocol: ftp
+          port: 21
+          exclude: |
+          
+                    **/.git*
+          
+                    **/.git*/**
+          
+                    **/node_modules/**
+          
+                    **/vendor/**
