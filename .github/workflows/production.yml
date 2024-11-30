@@ -1,23 +1,33 @@
 name: Test FTP Connection
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main  # Trigger deployment on push to the 'main' branch
 
 jobs:
   test-ftp:
+    name: Test FTP Connection
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Install lftp
-        run: sudo apt-get update && sudo apt-get install -y lftp
+      # Test FTP Connection
+      - name: Test FTP Connection to cPanel
+        uses: SamKirkland/FTP-Deploy-Action@4.2.0
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: ${{ secrets.FTP_PATH }}/test-ftp/  # Temporary test directory
+          port: 21
+          local-dir: ./test-file  # Directory containing a test file
+          debug: true  # Enable verbose logging to see connection details
 
-      - name: Test FTP Connection
+      # Cleanup test directory (optional)
+      - name: Cleanup Test Directory
         run: |
-          lftp -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ${{ secrets.FTP_HOST }} << EOF
-          set ssl:verify-certificate no
-          ls
-          bye
-          EOF
+          echo "Deleting test file from the repository after test."
+          rm -rf ./test-file
