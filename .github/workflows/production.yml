@@ -17,10 +17,8 @@ jobs:
       - name: Identify Changed Folders
         id: detect-changes
         run: |
-          echo "CHANGED_FOLDERS=$(git diff --dirstat=files,0 HEAD^ HEAD | cut -d'/' -f1 | sort -u | grep -E 'enterprise|aromaperk|bingoml|phlorah|chosenconcept|fitandfeet|edzain|totech')" >> $GITHUB_ENV
-
-      - name: Prepare Deployment List
-        run: |
+          CHANGED_FOLDERS=$(git diff --dirstat=files,0 HEAD^ HEAD | cut -d'/' -f1 | sort -u | grep -E 'enterprise|aromaperk|bingoml|phlorah|chosenconcept|fitandfeet|edzain|totech' || echo "")
+          echo "CHANGED_FOLDERS=$CHANGED_FOLDERS" >> $GITHUB_ENV
           if [ -z "$CHANGED_FOLDERS" ]; then
             echo "No changes detected. Skipping deployment."
             exit 0
