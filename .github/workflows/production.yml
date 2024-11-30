@@ -21,10 +21,10 @@ jobs:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: ${{ secrets.FTP_PATH }}/enterprise/api/  # Temporary test directory
+          server-dir: ${{ secrets.FTP_PATH }}/enterprise/  # Temporary test directory
           port: 22
           local-dir: ./test-file/  # Directory containing a test file
-          protocol: ftp
+          protocol: ftps
           log-level: verbose  # Enable detailed logging for troubleshooting
           dry-run: false       # Set to true if you want to test before actual deployment
           exclude: |
