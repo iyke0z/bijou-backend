@@ -1,38 +1,25 @@
-name: Test FTP Connection
+name: Test SFTP Connection
 
 on:
   push:
     branches:
-      - main  # Trigger deployment on push to the 'main' branch
+      - main
 
 jobs:
-  test-ftp:
-    name: Test FTP Connection
+  test-sftp:
+    name: Test SFTP Connection
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      # Test FTP Connection
-      - name: Test FTP Connection to cPanel
-        uses: appleboy/scp-action
+      - name: Test SFTP Connection
+        uses: appleboy/scp-action@v0.1.5
         with:
-          server: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: ${{ secrets.FTP_PATH }}/enterprise/  # Temporary test directory
-          port: 22
-          local-dir: ./test-file/  # Directory containing a test file
-          protocol: sftp
-          log-level: verbose  # Enable detailed logging for troubleshooting
-          dry-run: false       # Set to true if you want to test before actual deployment
-          exclude: |
-            **/.git*
-            **/node_modules/**
-
-      # Cleanup test directory (optional)
-      - name: Cleanup Test Directory
-        run: |
-          echo "Deleting test file from the repository after test."
-          rm -rf ./test-file
+          host: ${{ secrets.FTP_HOST }}    # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SFTP username
+          password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
+          source: ./test-file/            # Local directory with test files
+          target: /path/to/enterprise/    # Target directory on the server
+          port: 22                        # SFTP port
