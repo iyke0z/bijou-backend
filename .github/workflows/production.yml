@@ -13,13 +13,13 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
-
+      #enterprise
       - name: Test SFTP Connection
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.FTP_HOST }}    # Server hostname
           username: ${{ secrets.FTP_USERNAME }}  # SFTP username
           password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
-          source: ./test-file/            # Local directory with test files
+          source: ./*            # Local directory with test files
           target: ${{ secrets.FTP_PATH }}/enterprise/api/     # Target directory on the server
           port: 22                        # SFTP port
