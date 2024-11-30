@@ -24,6 +24,7 @@ jobs:
           server-dir: ${{ secrets.FTP_PATH }}/enterprise/api/  # Temporary test directory
           port: 21
           local-dir: ./test-file/  # Directory containing a test file
+          transfer-mode: passive  # Ensure Passive mode is used
           debug: true  # Enable verbose logging to see connection details
 
       # Cleanup test directory (optional)
