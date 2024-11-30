@@ -1,45 +1,23 @@
-name: Deploy to cPanel via FTP
+name: Test FTP Connection
 
 on:
-  push:
-    branches:
-      - main  # Trigger deployment on push to the 'main' branch
+  workflow_dispatch:
 
 jobs:
-  deploy:
-    name: FTP Deployment
+  test-ftp:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      # Deploy folder1
-      - name: Deploy Folder1 to cPanel
-        uses: SamKirkland/FTP-Deploy-Action@4.2.0
-        with:
-          server: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: ${{ secrets.FTP_PATH }}/enterprise/api/  # Remote directory on cPanel
-          port: 21
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
 
-      # # Deploy folder2
-      # - name: Deploy Folder2 to cPanel
-      #   uses: SamKirkland/FTP-Deploy-Action@4.2.0
-      #   with:
-      #     server: ${{ secrets.FTP_HOST }}
-      #     username: ${{ secrets.FTP_USERNAME }}
-      #     password: ${{ secrets.FTP_PASSWORD }}
-      #     server-dir: ${{ secrets.FTP_PATH }}/edzain/api/  # Remote directory on cPanel
-      #     port: 21
-
-      # # Deploy folder3
-      # - name: Deploy Folder3 to cPanel
-      #   uses: SamKirkland/FTP-Deploy-Action@4.2.0
-      #   with:
-      #     server: ${{ secrets.FTP_HOST }}
-      #     username: ${{ secrets.FTP_USERNAME }}
-      #     password: ${{ secrets.FTP_PASSWORD }}
-      #     server-dir: ${{ secrets.FTP_PATH }}/chosenconcept/api/  # Remote directory on cPanel
-      #     port: 21
+      - name: Test FTP Connection
+        run: |
+          lftp -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ${{ secrets.FTP_HOST }} << EOF
+          set ssl:verify-certificate no
+          ls
+          bye
+          EOF
