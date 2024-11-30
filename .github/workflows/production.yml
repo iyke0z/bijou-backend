@@ -22,7 +22,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./folder1  # Specify the local directory to upload
-          server-dir: ${{ secrets.FTP_PATH }}/folder1  # Remote directory on cPanel
+          server-dir: ${{ secrets.FTP_PATH }}/enterprise/api  # Remote directory on cPanel
 
       # Deploy folder2
       - name: Deploy Folder2 to cPanel
@@ -32,7 +32,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./folder2  # Specify the local directory to upload
-          server-dir: ${{ secrets.FTP_PATH }}/folder2  # Remote directory on cPanel
+          server-dir: ${{ secrets.FTP_PATH }}/edzain/api  # Remote directory on cPanel
 
       # Deploy folder3
       - name: Deploy Folder3 to cPanel
@@ -42,4 +42,4 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./folder3  # Specify the local directory to upload
-          server-dir: ${{ secrets.FTP_PATH }}/folder3  # Remote directory on cPanel
+          server-dir: ${{ secrets.FTP_PATH }}/chosenconcept/api  # Remote directory on cPanel
