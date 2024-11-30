@@ -1,0 +1,183 @@
+name: ngmkt production deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test-sftp:
+    name: Test SFTP Connection and Deploy to Multiple Folders
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+# 
+      - name: Upload Files to enterprise/api
+        uses: appleboy/scp-action@v0.1.5
+        with:
+          host: ${{ secrets.FTP_HOST }}    # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SFTP username
+          password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
+          source: ./                         # Local directory with test files
+          target: ${{ secrets.FTP_PATH }}/enterprise/api/  # Target directory on the server
+          port: 22                            # SFTP port
+
+      - name: Run PHP Artisan Command on enterprise/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/enterprise/api  # Navigate to the first folder
+            php artisan clean                      # Run your artisan command
+# 
+      - name: Upload Files to aromaperk/api
+        uses: appleboy/scp-action@v0.1.5
+        with:
+          host: ${{ secrets.FTP_HOST }}    # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SFTP username
+          password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
+          source: ./                         # Local directory with test files
+          target: ${{ secrets.FTP_PATH }}/aromaperk/api/  # Target directory on the server
+          port: 22                            # SFTP port
+
+      - name: Run PHP Artisan Command on aromaperk/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/aromaperk/api  # Navigate to the second folder
+            php artisan clean                      # Run your artisan command
+# 
+      - name: Upload Files to bingoml/api
+        uses: appleboy/scp-action@v0.1.5
+        with:
+          host: ${{ secrets.FTP_HOST }}    # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SFTP username
+          password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
+          source: ./                         # Local directory with test files
+          target: ${{ secrets.FTP_PATH }}/bingoml/api/  # Target directory on the server
+          port: 22                            # SFTP port
+
+      - name: Run PHP Artisan Command on bingoml/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/bingoml/api  # Navigate to the second folder
+            php artisan clean 
+# 
+      - name: Upload Files to phlorah/api
+        uses: appleboy/scp-action@v0.1.5
+        with:
+          host: ${{ secrets.FTP_HOST }}    # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SFTP username
+          password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
+          source: ./                         # Local directory with test files
+          target: ${{ secrets.FTP_PATH }}/phlorah/api/  # Target directory on the server
+          port: 22                            # SFTP port
+
+      - name: Run PHP Artisan Command on phlorah/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/phlorah/api  # Navigate to the second folder
+            php artisan clean 
+# 
+      - name: Upload Files to chosenconcept/api
+        uses: appleboy/scp-action@v0.1.5
+        with:
+          host: ${{ secrets.FTP_HOST }}    # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SFTP username
+          password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
+          source: ./                         # Local directory with test files
+          target: ${{ secrets.FTP_PATH }}/chosenconcept/api/  # Target directory on the server
+          port: 22                            # SFTP port
+
+      - name: Run PHP Artisan Command on chosenconcept/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/chosenconcept/api  # Navigate to the second folder
+            php artisan clean 
+# 
+      - name: Upload Files to fitandfeet/api
+        uses: appleboy/scp-action@v0.1.5
+        with:
+          host: ${{ secrets.FTP_HOST }}    # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SFTP username
+          password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
+          source: ./                         # Local directory with test files
+          target: ${{ secrets.FTP_PATH }}/fitandfeet/api/  # Target directory on the server
+          port: 22                            # SFTP port
+
+      - name: Run PHP Artisan Command on fitandfeet/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/fitandfeet/api  # Navigate to the second folder
+            php artisan clean 
+# 
+      - name: Upload Files to edzain/api
+        uses: appleboy/scp-action@v0.1.5
+        with:
+          host: ${{ secrets.FTP_HOST }}    # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SFTP username
+          password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
+          source: ./                         # Local directory with test files
+          target: ${{ secrets.FTP_PATH }}/edzain/api/  # Target directory on the server
+          port: 22                            # SFTP port
+
+      - name: Run PHP Artisan Command on edzain/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/edzain/api  # Navigate to the second folder
+            php artisan clean
+# 
+      - name: Upload Files to totech/api
+        uses: appleboy/scp-action@v0.1.5
+        with:
+          host: ${{ secrets.FTP_HOST }}    # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SFTP username
+          password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
+          source: ./                         # Local directory with test files
+          target: ${{ secrets.FTP_PATH }}/totech/api/  # Target directory on the server
+          port: 22                            # SFTP port
+
+      - name: Run PHP Artisan Command on totech/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/totech/api  # Navigate to the second folder
+            php artisan clean 
