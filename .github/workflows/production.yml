@@ -1,4 +1,4 @@
-name: Test SFTP Connection
+name: ngmkt production deploy
 
 on:
   push:
@@ -7,23 +7,55 @@ on:
 
 jobs:
   test-sftp:
-    name: Test SFTP Connection
+    name: Test SFTP Connection and Deploy to Multiple Folders
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
         
-      #enterprise
-      - name: Test SFTP Connection
+      # Step 1: Upload files to the first folder (e.g., /enterprise/api/)
+      - name: Upload Files to enterprise/api
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.FTP_HOST }}    # Server hostname
           username: ${{ secrets.FTP_USERNAME }}  # SFTP username
           password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
-          source: ./ # Local directory with test files
-          target: ${{ secrets.FTP_PATH }}/enterprise/api/     # Target directory on the server
-          port: 22                        # SFTP port
+          source: ./                         # Local directory with test files
+          target: ${{ secrets.FTP_PATH }}/enterprise/api/  # Target directory on the server
+          port: 22                            # SFTP port
+
+      # Step 2: Run PHP Artisan Command in the first folder
+      - name: Run PHP Artisan Command on enterprise/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
           script: |
-            cd home/ngmktsit/www/  # Navigate to the correct folder
+            cd /home/ngmktsit/www/enterprise/api  # Navigate to the first folder
+            php artisan clean                      # Run your artisan command
+
+      # Step 3: Upload files to the second folder (e.g., /aromaperk/)
+      - name: Upload Files to aromaperk/api
+        uses: appleboy/scp-action@v0.1.5
+        with:
+          host: ${{ secrets.FTP_HOST }}    # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SFTP username
+          password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
+          source: ./                         # Local directory with test files
+          target: ${{ secrets.FTP_PATH }}/aromaperk/api/  # Target directory on the server
+          port: 22                            # SFTP port
+
+      # Step 4: Run PHP Artisan Command in the second folder  
+      - name: Run PHP Artisan Command on aromaperk/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/aromaperk/api  # Navigate to the first folder
             php artisan clean                      # Run your artisan command
