@@ -14,18 +14,16 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
         
-      # Step 1: Upload files to the first folder (e.g., /enterprise/api/)
-      - name: Upload Files to enterprise/api
-        uses: appleboy/scp-action@v0.1.5
-        with:
-          host: ${{ secrets.FTP_HOST }}    # Server hostname
-          username: ${{ secrets.FTP_USERNAME }}  # SFTP username
-          password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
-          source: ./                         # Local directory with test files
-          target: ${{ secrets.FTP_PATH }}/enterprise/api/  # Target directory on the server
-          port: 22                            # SFTP port
+      # Step 1: Install rsync
+      - name: Install rsync
+        run: sudo apt-get install -y rsync
 
-      # Step 2: Run PHP Artisan Command in the first folder
+      # enterprise
+      - name: Sync Files to enterprise/api
+        run: |
+          rsync -avz --exclude '.git' --exclude 'node_modules' --exclude 'vendor' ./ ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_HOST }}:${{ secrets.FTP_PATH }}/enterprise/api/
+
+      # enterprise Run PHP Artisan Command in the second folder
       - name: Run PHP Artisan Command on enterprise/api
         uses: appleboy/ssh-action@v0.1.6
         with:
@@ -37,18 +35,12 @@ jobs:
             cd /home/ngmktsit/www/enterprise/api  # Navigate to the first folder
             php artisan clean                      # Run your artisan command
 
-      # Step 3: Upload files to the second folder (e.g., /aromaperk/)
-      - name: Upload Files to aromaperk/api
-        uses: appleboy/scp-action@v0.1.5
-        with:
-          host: ${{ secrets.FTP_HOST }}    # Server hostname
-          username: ${{ secrets.FTP_USERNAME }}  # SFTP username
-          password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
-          source: ./                         # Local directory with test files
-          target: ${{ secrets.FTP_PATH }}/aromaperk/api/  # Target directory on the server
-          port: 22                            # SFTP port
+      # aromaperk
+      - name: Sync Files to aromaperk/api
+        run: |
+          rsync -avz --exclude '.git' --exclude 'node_modules' --exclude 'vendor' ./ ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_HOST }}:${{ secrets.FTP_PATH }}/aromaperk/api/
 
-      # Step 4: Run PHP Artisan Command in the second folder  
+      # aromaperk Run PHP Artisan Command in the second folder
       - name: Run PHP Artisan Command on aromaperk/api
         uses: appleboy/ssh-action@v0.1.6
         with:
@@ -57,5 +49,107 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}  # SSH password
           port: 22                               # SSH port
           script: |
-            cd /home/ngmktsit/www/aromaperk/api  # Navigate to the first folder
+            cd /home/ngmktsit/www/aromaperk/api  # Navigate to the second folder
+            php artisan clean                      # Run your artisan command
+
+      # edzain
+      - name: Sync Files to edzain/api
+        run: |
+          rsync -avz --exclude '.git' --exclude 'node_modules' --exclude 'vendor' ./ ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_HOST }}:${{ secrets.FTP_PATH }}/edzain/api/
+
+      # edzain Run PHP Artisan Command in the second folder
+      - name: Run PHP Artisan Command on edzain/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/edzain/api  # Navigate to the second folder
+            php artisan clean                      # Run your artisan command
+
+      # fitandfeet
+      - name: Sync Files to fitandfeet/api
+        run: |
+          rsync -avz --exclude '.git' --exclude 'node_modules' --exclude 'vendor' ./ ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_HOST }}:${{ secrets.FTP_PATH }}/fitandfeet/api/
+
+      # fitandfeet Run PHP Artisan Command in the second folder
+      - name: Run PHP Artisan Command on fitandfeet/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/fitandfeet/api  # Navigate to the second folder
+            php artisan clean                      # Run your artisan command
+
+     # phlorah
+      - name: Sync Files to phlorah/api
+        run: |
+          rsync -avz --exclude '.git' --exclude 'node_modules' --exclude 'vendor' ./ ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_HOST }}:${{ secrets.FTP_PATH }}/phlorah/api/
+
+      # phlorah Run PHP Artisan Command in the second folder
+      - name: Run PHP Artisan Command on phlorah/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/phlorah/api  # Navigate to the second folder
+            php artisan clean                      # Run your artisan command
+
+      # chosenconcept
+      - name: Sync Files to chosenconcept/api
+        run: |
+          rsync -avz --exclude '.git' --exclude 'node_modules' --exclude 'vendor' ./ ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_HOST }}:${{ secrets.FTP_PATH }}/chosenconcept/api/
+
+      # chosenconcept Run PHP Artisan Command in the second folder
+      - name: Run PHP Artisan Command on chosenconcept/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/chosenconcept/api  # Navigate to the second folder
+            php artisan clean                      # Run your artisan command
+
+      # totech
+      - name: Sync Files to totech/api
+        run: |
+          rsync -avz --exclude '.git' --exclude 'node_modules' --exclude 'vendor' ./ ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_HOST }}:${{ secrets.FTP_PATH }}/totech/api/
+
+      # totech Run PHP Artisan Command in the second folder
+      - name: Run PHP Artisan Command on totech/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/totech/api  # Navigate to the second folder
+            php artisan clean                      # Run your artisan command
+
+      # bingoml
+      - name: Sync Files to bingoml/api
+        run: |
+          rsync -avz --exclude '.git' --exclude 'node_modules' --exclude 'vendor' ./ ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_HOST }}:${{ secrets.FTP_PATH }}/bingoml/api/
+
+      # bingoml Run PHP Artisan Command in the second folder
+      - name: Run PHP Artisan Command on bingoml/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/bingoml/api  # Navigate to the second folder
             php artisan clean                      # Run your artisan command
