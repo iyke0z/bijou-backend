@@ -1,0 +1,45 @@
+name: Deploy to cPanel via FTP
+
+on:
+  push:
+    branches:
+      - main  # Trigger deployment on push to the 'main' branch
+
+jobs:
+  deploy:
+    name: FTP Deployment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Deploy folder1
+      - name: Deploy Folder1 to cPanel
+        uses: SamKirkland/FTP-Deploy-Action@4.5.1
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./folder1  # Specify the local directory to upload
+          server-dir: ${{ secrets.FTP_PATH }}/folder1  # Remote directory on cPanel
+
+      # Deploy folder2
+      - name: Deploy Folder2 to cPanel
+        uses: SamKirkland/FTP-Deploy-Action@4.5.1
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./folder2  # Specify the local directory to upload
+          server-dir: ${{ secrets.FTP_PATH }}/folder2  # Remote directory on cPanel
+
+      # Deploy folder3
+      - name: Deploy Folder3 to cPanel
+        uses: SamKirkland/FTP-Deploy-Action@4.5.1
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./folder3  # Specify the local directory to upload
+          server-dir: ${{ secrets.FTP_PATH }}/folder3  # Remote directory on cPanel
