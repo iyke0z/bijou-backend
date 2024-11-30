@@ -16,7 +16,7 @@ jobs:
 
       # Test FTP Connection
       - name: Test FTP Connection to cPanel
-        uses: SamKirkland/FTP-Deploy-Action@4.2.0
+        uses: appleboy/scp-action
         with:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
