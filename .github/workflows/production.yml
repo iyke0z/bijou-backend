@@ -23,6 +23,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: ${{ secrets.FTP_PATH }}/enterprise/api/  # Remote directory on cPanel
           passive: true
+          method: incremental
           protocol: ftp
           port: 21
           exclude: |
@@ -44,6 +45,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: ${{ secrets.FTP_PATH }}/edzain/api/  # Remote directory on cPanel
           passive: true
+          method: incremental
           protocol: ftp
           port: 21
           exclude: |
@@ -64,6 +66,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: ${{ secrets.FTP_PATH }}/chosenconcept/api/  # Remote directory on cPanel
+          method: incremental
           passive: true
           protocol: ftp
           port: 21
