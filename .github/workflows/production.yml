@@ -26,7 +26,7 @@ jobs:
 
       # Deploy folder2
       - name: Deploy Folder2 to cPanel
-        uses: SamKirkland/FTP-Deploy-Action@4.5.1
+        uses: SamKirkland/FTP-Deploy-Action@v4
         with:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
