@@ -22,7 +22,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: ${{ secrets.FTP_PATH }}/enterprise/api/  # Temporary test directory
-          port: 21
+          port: 22
           local-dir: ./test-file/  # Directory containing a test file
           protocol: ftp
           log-level: verbose  # Enable detailed logging for troubleshooting
