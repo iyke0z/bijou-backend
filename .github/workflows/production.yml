@@ -21,5 +21,5 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}  # SFTP username
           password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
           source: ./test-file/            # Local directory with test files
-          target: /path/to/enterprise/    # Target directory on the server
+          target: ${{ secrets.FTP_PATH }}/enterprise/api/     # Target directory on the server
           port: 22                        # SFTP port
