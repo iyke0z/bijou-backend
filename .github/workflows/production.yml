@@ -13,6 +13,7 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
+        
       #enterprise
       - name: Test SFTP Connection
         uses: appleboy/scp-action@v0.1.5
@@ -23,3 +24,6 @@ jobs:
           source: ./ # Local directory with test files
           target: ${{ secrets.FTP_PATH }}/enterprise/api/     # Target directory on the server
           port: 22                        # SFTP port
+          script: |
+            cd home/ngmktsit/www/  # Navigate to the correct folder
+            php artisan clean                      # Run your artisan command
