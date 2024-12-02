@@ -45,7 +45,7 @@ jobs:
             cd /home/ngmktsit/www/enterprise/api  # Navigate to the first folder
             php artisan migrate
             php artisan clean
-# 
+            
       - name: Upload Files to aromaperk/api
         uses: appleboy/scp-action@v0.1.5
         with:
@@ -67,8 +67,8 @@ jobs:
             cd /home/ngmktsit/www/aromaperk/api  # Navigate to the second folder
             php artisan migrate
             php artisan clean
-     # 
-       - name: Upload Files to bingoml/api
+            
+      - name: Upload Files to bingoml/api
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.FTP_HOST }}    # Server hostname
@@ -177,8 +177,7 @@ jobs:
             cd /home/ngmktsit/www/edzain/api  # Navigate to the second folder
             php artisan migrate
             php artisan clean
-  # 
-    - name: Upload Files to totech/api
+      - name: Upload Files to totech/api
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.FTP_HOST }}    # Server hostname
@@ -198,4 +197,4 @@ jobs:
           script: |
             cd /home/ngmktsit/www/totech/api  # Navigate to the second folder
             php artisan migrate
-            php artisan clean
+            php artisan clean 
