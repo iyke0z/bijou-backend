@@ -17,7 +17,7 @@ class UserRepository implements UserRepositoryInterface{
     public function create_user($request){
         // upload image
         $picture = null;
-        if($request['picture'] != null){
+        if(!is_null($request['picture']) && !is_string($request['picture'])){
             $picture = Str::slug($request['fullname'], '-').time().'.'.$request['picture']->extension();
             $request['picture']->move(public_path('images/users'), $picture);
         }
