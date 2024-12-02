@@ -23,14 +23,12 @@ use Illuminate\Support\Facades\Auth;
 class TransactionRepository implements TransactionRepositoryInterface{
     use ProductTrait, RefCode, CustomerTrait, BusinessTrait, CheckoutTrait;
 
-
     public function drinks_prep_status(){
         $drinks = Sales::with(['product' => function($q){
             $q->where('category_id',"!=", 1)->where('category_id', "!=", 2);
         }])->with(['transaction' => function($q) {
             $q->where('status', "!=", "cancelled");
         }])->with('user')->where('prep_status', "not_ready")->OrWhere('prep_status', "almost_ready")->latest()->get();
-
 
         return res_success('drinks', $drinks);
 
@@ -88,7 +86,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
                 $sale->save();
             }
 
-            if(isset($request['payment_method']) == "wallet" || isset($request['payment_method']) == 'on_credit'){
+            if($request['payment_method'] == "wallet" || $request['payment_method'] == 'on_credit'){
                 $customer = Customer::find($request["customer_id"]);
                 $customer->wallet_balance = $customer->wallet_balance - $request["amount"];
                 $customer->save();
