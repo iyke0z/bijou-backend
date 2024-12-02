@@ -13,6 +13,16 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
+        
+      - name: Identify Changed Folders
+        id: detect-changes
+        run: |
+          CHANGED_FOLDERS=$(git diff --dirstat=files,0 HEAD^ HEAD | cut -d'/' -f1 | sort -u | grep -E 'enterprise|aromaperk|bingoml|phlorah|chosenconcept|fitandfeet|edzain|totech' || echo "")
+          echo "CHANGED_FOLDERS=$CHANGED_FOLDERS" >> $GITHUB_ENV
+          if [ -z "$CHANGED_FOLDERS" ]; then
+            echo "No changes detected. Skipping deployment."
+            exit 0
+          fi
 # 
       - name: Upload Files to enterprise/api
         uses: appleboy/scp-action@v0.1.5
