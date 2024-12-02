@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\BusinessTime;
+
 if (!function_exists('res_auth_success')) {
     function res_auth_success($message, $data, $auth_token)
     {
@@ -163,5 +165,13 @@ if (!function_exists('res_general_error')) {
             'status_code' => '050',
             'message' => $message,
         ], $code);
+    }
+}
+
+if (!function_exists('getBusinessTime')) {
+    function getBusinessTime()
+    {
+        $business_time = BusinessTime::first();
+        return $business_time;
     }
 }

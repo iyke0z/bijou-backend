@@ -170,6 +170,7 @@ Route::prefix('v1')->group(function (){
 
         Route::post('generate-code', [AuthController::class, 'generate_user_codes'])->middleware('IaActive');
         Route::post('transaction-report', [ReportController::class, 'generate_report'])->middleware('IaActive');
+        Route::post('user-transaction-report/{id}', [ReportController::class, 'generate_user_report'])->middleware('IaActive');
         Route::post('user-sales-report', [ReportController::class, 'generate_sales_report'])->middleware('IaActive');
     });
 });

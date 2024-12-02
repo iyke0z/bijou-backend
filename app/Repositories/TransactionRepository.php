@@ -88,7 +88,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
                 $sale->save();
             }
 
-            if($request['payment_method'] == "wallet" || $request['payment_method'] == 'on_credit'){
+            if(isset($request['payment_method']) == "wallet" || isset($request['payment_method']) == 'on_credit'){
                 $customer = Customer::find($request["customer_id"]);
                 $customer->wallet_balance = $customer->wallet_balance - $request["amount"];
                 $customer->save();

@@ -36,10 +36,12 @@ class CreateSalesRequest extends FormRequest
         */
         return [
             "products" => "required|array",
-            "platform"=>'nullable',
+            "platform"=>'sometimes',
             "auth_code" => 'required',
             'description' => 'nullable',
-            'amount' => 'required'
+            'is_order'=> 'required',
+            'amount' => 'sometimes',
+            'payment_method' => 'sometimes'
         ];
     }
 }

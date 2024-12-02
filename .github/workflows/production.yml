@@ -43,8 +43,8 @@ jobs:
           port: 22                               # SSH port
           script: |
             cd /home/ngmktsit/www/enterprise/api  # Navigate to the first folder
-            php artisan clean                      # Run your artisan command
-# 
+            php artisan migrate
+            php artisan clean# 
       - name: Upload Files to aromaperk/api
         uses: appleboy/scp-action@v0.1.5
         with:
@@ -64,8 +64,8 @@ jobs:
           port: 22                               # SSH port
           script: |
             cd /home/ngmktsit/www/aromaperk/api  # Navigate to the second folder
-            php artisan clean                      # Run your artisan command
-# 
+            php artisan migrate
+            php artisan clean# 
       - name: Upload Files to bingoml/api
         uses: appleboy/scp-action@v0.1.5
         with:
@@ -169,8 +169,8 @@ jobs:
           port: 22                               # SSH port
           script: |
             cd /home/ngmktsit/www/edzain/api  # Navigate to the second folder
-            php artisan clean
-# 
+            php artisan migrate
+            php artisan clean# 
       - name: Upload Files to totech/api
         uses: appleboy/scp-action@v0.1.5
         with:

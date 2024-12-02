@@ -32,7 +32,9 @@ class UpdateBusinessDetailsRequest extends FormRequest
             "motto" => "nullable",
             "vat" => "required",
             "status"=>"sometimes",
-            "expiry_date"=>'sometimes'
+            "expiry_date"=>'sometimes',
+            "opening_time" => "sometimes",
+            "closing_time" => "sometimes",
         ];
     }
 }

@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Interfaces\AuthRepositoryInterface;
 use App\Models\BusinessDetails;
+use App\Models\BusinessTime;
 use App\Models\LoginLog;
 use App\Models\User;
 use App\Models\WaiterCode;
@@ -85,6 +86,15 @@ class AuthRepository implements AuthRepositoryInterface{
             "status"=>$request["status"],
             "expiry_date" => $request['expiry_date']
         ]);
+
+        if (isset($request['opening_time']) && isset($request['closing_time'])) {
+            $businesstime = BusinessTime::first();
+            $businesstime->update([
+                'opening_time' => $request['opening_time'],
+                'closing_time' => $request['closing_time'],
+            ]);
+        }
+
         return res_completed('updated');
 
     }

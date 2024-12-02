@@ -34,9 +34,9 @@ class TransactionController extends Controller
         $this->transRepo = $transRepo;
     }
 
-    public function sell(Request $request){
-        // $validated = $request->validated();
-        return $this->transRepo->sell($request);
+    public function sell(CreateSalesRequest $request){
+        $validated = $request->validated();
+        return $this->transRepo->sell($validated);
     }
     public function update_sale(UpdateSalesRequest $request){
             $validated = $request->validated();

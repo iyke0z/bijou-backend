@@ -12,15 +12,24 @@ use App\Models\Sales;
 use App\Models\SplitPayments;
 use App\Models\Transaction;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class ReportController extends Controller
 {
+    public $opening_time;
+    public $closing_time;
+    public function __construct(){
+        $businessTime = getBusinessTime();
+        $this->opening_time = $businessTime['start_time'] ?? "00:00";
+        $this->closing_time = $businessTime['closing_time'] ?? "23:59";
+    }
     public function general_report(Request $request){
-        $start_date  = $request['start_date']; //start at 6:00am
-        $end_date = $request['end_date']; //start at 4:am
+        $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
+        $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
+
         $validated = Validator::make($request->all(), [
             'start_date' => 'required',
             'end_date' => 'required',
@@ -28,7 +37,7 @@ class ReportController extends Controller
         ]);
 
         if($validated){
-                $getTransactions = Transaction::whereBetween(DB::raw('created_at'),  [$start_date, $end_date])
+            $getTransactions = Transaction::whereBetween('created_at', [$start_date, $end_date])
                                     ->with('customer')
                                     ->with(['user' => function ($q) {
                                         $q->withTrashed();
@@ -40,47 +49,47 @@ class ReportController extends Controller
                                     ->withTrashed()->get();
                 
                 $get_sales = Sales::join('transactions', 'sales.ref', 'transactions.id')
-                                ->whereBetween(DB::raw('DATE(sales.created_at)'),  [$start_date, $end_date])
+                                ->whereBetween('transactions.created_at', [$start_date, $end_date])
                                 ->where('transactions.status', '!=', 'cancelled')
                                 ->with('product')->with('user')->get();
             
-                $get_purchases = PurchaseDetails::whereBetween(DB::raw('created_at'), [$start_date, $end_date])
+                $get_purchases = PurchaseDetails::whereBetween('created_at', [$start_date, $end_date])
                                     ->with('purchase')->with('product')->get();
 
-                $get_expenditures = Expenditure::whereBetween(DB::raw('created_at'), [$start_date, $end_date])
+                $get_expenditures = Expenditure::whereBetween('created_at', [$start_date, $end_date])
                                     ->with('type')->with('user')->get();
 
             $report = [
                 'transaction' => $getTransactions,
                 'sales' => $get_sales,
                 'purchases' => $get_purchases,
-                'expenditures' => $get_expenditures
+                'expenditures' => $get_expenditures,
+                'query'=> [$start_date, $end_date]
             ];
             return res_success('report', $report);
         }
-
     }
 
     public function cancelled_receipt(Request $request){
-        $start_date  = $request['start_date'];
-        $end_date = $request['end_date'];
+        $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
+        $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
         $validated = Validator::make($request->all(), [
             'start_date' => 'required',
             'end_date' => 'required'
         ]);
 
         if($validated){
-            $getTransactions = Transaction::whereBetween(DB::raw('created_at'),  [$start_date, $end_date])
+            $getTransactions = Transaction::whereBetween('created_at', [$start_date , $end_date])
                                 ->where('type', 'cancelled')
                                 ->with('customer')
                                 ->with(['sales' => function($q){
                                     $q->join('products', 'sales.product_id', 'products.id');
                                 }])->get();
 
-            $get_sales = Sales::whereBetween(DB::raw('created_at'), [$start_date, $end_date])
-            ->where('type', 'cancelled')
-            ->with('product')
-            ->with('user')->get();
+            $get_sales = Sales::whereBetween('created_at', [$start_date, $end_date])
+                                ->where('type', 'cancelled')
+                                ->with('product')
+                                ->with('user')->get();
             $report = [
                 'transaction' => $getTransactions,
                 'sales' => $get_sales,
@@ -94,8 +103,9 @@ class ReportController extends Controller
 
     public function generate_sales_report(Request $request){
         $user = $request['user_id'];
-        $start_date  = $request['start_date']; //start at 6:00am
-        $end_date = $request['end_date']; //start at 4:am
+        $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
+        $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
+
         $validated = Validator::make($request->all(), [
             'start_date' => 'required',
             'end_date' => 'required',
@@ -163,9 +173,142 @@ class ReportController extends Controller
         }
         
     }
+    public function generate_user_report(Request $request, $id){
+            $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
+            $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;    
+
+            $validated = Validator::make($request->all(), [
+                'start_date' => 'required',
+                'end_date' => 'required',
+            ]);
+    
+            if ($validated) {
+                // get transactions between 6am the previous day - 4am today
+                $transactions = Transaction::whereBetween('created_at', [$start_date, $end_date])
+                ->with('split')->with("user")->with('sales')->where('user_id', $id)->sum("amount");
+                
+                $sales = Sales::select(DB::raw('sum(price * qty) as  amount'))
+                            ->whereBetween('created_at', [$start_date, $end_date])
+                            ->where('user_id', $id)->get();
+                $sales = $sales[0]['amount'];
+    
+                //get transactions paid with cash
+                $cash =  Transaction::whereBetween('created_at', [$start_date, $end_date])
+                            ->where("payment_method", "cash")->where('user_id', $id)
+                            ->sum("amount");
+    
+                //get transactions paid with card
+                $card =  Transaction::whereBetween('created_at', [$start_date, $end_date])
+                        ->where("payment_method", "card")->where('user_id', $id)
+                        ->sum("amount");
+    
+                //get transactions paid with transfer
+                $transfer =  Transaction::whereBetween('created_at', [$start_date, $end_date])
+                            ->where("payment_method", "transfer")->where('user_id', $id)
+                            ->sum("amount");
+    
+                 //get transactions paid with split
+                 $split =  Transaction::whereBetween('created_at', [$start_date, $end_date])
+                            ->where("payment_method", "split")->where('user_id', $id)
+                            ->sum("amount");
+    
+                $split_payment_card = SplitPayments::whereHas('transaction', function ($query) use ($id) {
+                                $query->where('user_id', $id);
+                            })
+                            ->whereBetween('created_at', [$start_date, $end_date])
+                            ->where("payment_method", "card")
+                            ->sum("amount");
+                            
+    
+                 $split_payment_cash = SplitPayments::whereHas('transaction', function ($query) use ($id) {
+                                $query->where('user_id', $id);
+                            })
+                            ->whereBetween('created_at', [$start_date, $end_date])
+                                        ->where("payment_method", "cash")
+                                        ->sum("amount");
+    
+                 $split_payment_transfer = SplitPayments::whereHas('transaction', function ($query) use ($id) {
+                                $query->where('user_id', $id);
+                            })
+                            ->whereBetween('created_at', [$start_date, $end_date])
+                                            ->where("payment_method", "transfer")
+                                            ->sum("amount");
+                
+                 //bank payment received
+                 $banks = Banks::get();
+                 $bank_sales = array();
+                 foreach ($banks as $bank) {
+                    $card__banktoday =  Transaction::whereBetween('created_at', [$start_date, $end_date])
+                                        ->where("payment_method", "card")
+                                        ->where('bank_id', $bank['id'])->where('user_id', $id)
+                                        ->sum("amount");
+    
+                    $split_payment_bank_card_today = SplitPayments::whereHas('transaction', function ($query) use ($id) {
+                                $query->where('user_id', $id);
+                            })
+                            ->whereBetween('created_at', [$start_date, $end_date])
+                                                        ->where("payment_method", "card")
+                                                        ->where('bank_id', $bank['id'])
+                                                        ->sum("amount");
+                    
+                    array_push($bank_sales, [
+                        "bank_name" => $bank['name'],
+                        'amount' => $card__banktoday +  $split_payment_bank_card_today
+                    ]);
+                 }
+                 // get comlementary
+                $complementary = Transaction::whereBetween('created_at', [$start_date, $end_date])
+                                    ->where("payment_method", "complementary")->where('user_id', $id)
+                                    ->sum("amount");
+    
+                
+                $oustanding = Transaction::with(["sales" => function($q){
+                    $q->with('product');
+                }])->with("split")->whereBetween('created_at', [$start_date, $end_date])
+                ->with(['user' => function ($q) {
+                    $q->withTrashed();
+                }])->where("status", "pending")->where('user_id', $id)->get();
+    
+                $sold_items = Transaction::with(["sales" => function($q){
+                    $q->with('product');
+                }])->with("split")->whereBetween('created_at', [$start_date, $end_date])
+                ->with(['user' => function ($q) {
+                    $q->withTrashed();
+                }])->where("status", "completed")->where('user_id', $id)->get();
+    
+    
+                $void_items = Transaction::with(["sales" => function($q){
+                    $q->with('product')->withTrashed();
+                }])->whereBetween('created_at', [$start_date, $end_date])
+                ->with(['user' => function ($q) {
+                    $q->withTrashed();
+                }])->where("status", "cancelled")->where('user_id', $id)->withTrashed()->get();
+    
+                $summary = [
+                    "expected_amount" => $sales == null ? 0 : $sales,//$this->getVat(),
+                    "paid_amount" => $transactions,
+                    "cash" => $cash + $split_payment_cash,
+                    "card" => $card + $split_payment_card,
+                    "transfer" =>$transfer + $split_payment_transfer,
+                    "split_payments" =>$split,
+                    "split_payments_card" => $split_payment_card,
+                    "split_payments_transfer" => $split_payment_transfer,
+                    "split_payments_cash" => $split_payment_cash,
+                    "banks" =>$bank_sales,
+                    "complementary" => $complementary,
+                    "oustanding" => $oustanding,
+                    "sold_items" => $sold_items,
+                    "void_items" => $void_items,
+                    
+                ];
+    
+                return res_success('report', $summary);
+    
+            }
+        } 
     public function generate_report(Request $request){
-        $start_date  = $request['start_date']; //start at 6:00am
-        $end_date = $request['end_date']; //start at 4:am
+        $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
+        $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
 
         $validated = Validator::make($request->all(), [
             'start_date' => 'required',
@@ -174,39 +317,39 @@ class ReportController extends Controller
 
         if ($validated) {
             // get transactions between 6am the previous day - 4am today
-            $transactions = Transaction::whereBetween('created_at',  [$start_date, $end_date])
+            $transactions = Transaction::whereBetween('created_at', [$start_date, $end_date])
             ->with('split')->with("user")->with('sales')->sum("amount");
             
-            $sales = Sales::select(DB::raw('sum(price * qty) as  amount'))->whereBetween('created_at',  [$start_date, $end_date])->get();
+            $sales = Sales::select(DB::raw('sum(price * qty) as  amount'))->whereBetween('created_at', [$start_date, $end_date])->get();
             $sales = $sales[0]['amount'];
 
             //get transactions paid with cash
-            $cash =  Transaction::whereBetween('created_at',  [$start_date, $end_date])->where("payment_method", "cash")->sum("amount");
+            $cash =  Transaction::whereBetween('created_at', [$start_date, $end_date])->where("payment_method", "cash")->sum("amount");
 
             //get transactions paid with card
-            $card =  Transaction::whereBetween('created_at',  [$start_date, $end_date])
+            $card =  Transaction::whereBetween('created_at', [$start_date, $end_date])
                     ->where("payment_method", "card")
                     ->sum("amount");
 
             //get transactions paid with transfer
-            $transfer =  Transaction::whereBetween('created_at',  [$start_date, $end_date])
+            $transfer =  Transaction::whereBetween('created_at', [$start_date, $end_date])
                         ->where("payment_method", "transfer")
                         ->sum("amount");
 
              //get transactions paid with split
-             $split =  Transaction::whereBetween('created_at',  [$start_date, $end_date])
+             $split =  Transaction::whereBetween('created_at', [$start_date, $end_date])
                         ->where("payment_method", "split")
                         ->sum("amount");
 
-             $split_payment_card = SplitPayments::whereBetween('created_at',  [$start_date, $end_date])
+             $split_payment_card = SplitPayments::whereBetween('created_at', [$start_date, $end_date])
                                     ->where("payment_method", "card")
                                     ->sum("amount");
 
-             $split_payment_cash = SplitPayments::whereBetween('created_at',  [$start_date, $end_date])
+             $split_payment_cash = SplitPayments::whereBetween('created_at', [$start_date, $end_date])
                                     ->where("payment_method", "cash")
                                     ->sum("amount");
 
-             $split_payment_transfer = SplitPayments::whereBetween('created_at',  [$start_date, $end_date])
+             $split_payment_transfer = SplitPayments::whereBetween('created_at', [$start_date, $end_date])
                                         ->where("payment_method", "transfer")
                                         ->sum("amount");
             
@@ -214,12 +357,12 @@ class ReportController extends Controller
              $banks = Banks::get();
              $bank_sales = array();
              foreach ($banks as $bank) {
-                $card__banktoday =  Transaction::whereBetween('created_at',  [$start_date, $end_date])
+                $card__banktoday =  Transaction::whereBetween('created_at', [$start_date, $end_date])
                                     ->where("payment_method", "card")
                                     ->where('bank_id', $bank['id'])
                                     ->sum("amount");
 
-                $split_payment_bank_card_today = SplitPayments::whereBetween('created_at',  [$start_date, $end_date])
+                $split_payment_bank_card_today = SplitPayments::whereBetween('created_at', [$start_date, $end_date])
                                                     ->where("payment_method", "card")
                                                     ->where('bank_id', $bank['id'])
                                                     ->sum("amount");
@@ -230,21 +373,21 @@ class ReportController extends Controller
                 ]);
              }
              // get comlementary
-            $complementary = Transaction::whereBetween('created_at',  [$start_date, $end_date])
+            $complementary = Transaction::whereBetween('created_at', [$start_date, $end_date])
                                 ->where("payment_method", "complementary")
                                 ->sum("amount");
 
             
             $oustanding = Transaction::with(["sales" => function($q){
                 $q->with('product');
-            }])->with("split")->whereBetween('created_at',  [$start_date, $end_date])
+            }])->with("split")->whereBetween('created_at', [$start_date, $end_date])
             ->with(['user' => function ($q) {
                 $q->withTrashed();
             }])->where("status", "pending")->get();
 
             $sold_items = Transaction::with(["sales" => function($q){
                 $q->with('product');
-            }])->with("split")->whereBetween('created_at',  [$start_date, $end_date])
+            }])->with("split")->whereBetween('created_at', [$start_date, $end_date])
             ->with(['user' => function ($q) {
                 $q->withTrashed();
             }])->where("status", "completed")->get();
@@ -252,7 +395,7 @@ class ReportController extends Controller
 
             $void_items = Transaction::with(["sales" => function($q){
                 $q->with('product')->withTrashed();
-            }])->whereBetween('created_at',  [$start_date, $end_date])
+            }])->whereBetween('created_at', [$start_date, $end_date])
             ->with(['user' => function ($q) {
                 $q->withTrashed();
             }])->where("status", "cancelled")->withTrashed()->get();
@@ -271,8 +414,7 @@ class ReportController extends Controller
                 "complementary" => $complementary,
                 "oustanding" => $oustanding,
                 "sold_items" => $sold_items,
-                "void_items" => $void_items,
-                
+                "void_items" => $void_items
             ];
 
             return res_success('report', $summary);
@@ -287,12 +429,14 @@ class ReportController extends Controller
     }
 
     public function getSalesPerformance(Request $request){
+        $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
+        $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
         $sales = Transaction::select(
                     DB::raw('DATE(created_at) as sale_date'), // Extract the date portion
                     DB::raw('SUM(amount) as total_amount')   // Sum the amount per day
                 )
                 ->where('type', 'sold')
-                ->whereBetween(DB::raw('DATE(created_at)'), [$request['start_date'], $request['end_date']])
+                ->whereBetween('created_at', [$start_date, $end_date])
                 ->where('status', 'completed')
                 ->groupBy('sale_date') // Group by the extracted date
                 ->orderBy('sale_date') // Optionally order by the date
@@ -302,8 +446,8 @@ class ReportController extends Controller
     }
 
     public function getOpexPerformance(Request $request){
-        $start_date  = $request['start_date'];
-        $end_date = $request['end_date'];
+        $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
+        $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
         $validated = Validator::make($request->all(), [
             'start_date' => 'required',
             'end_date' => 'required'
@@ -332,8 +476,8 @@ class ReportController extends Controller
     }
 
     public function getCogs(Request $request){
-        $start_date  = $request['start_date'];
-        $end_date = $request['end_date'];
+        $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
+        $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
         $validated = Validator::make($request->all(), [
             'start_date' => 'required',
             'end_date' => 'required'
@@ -346,7 +490,7 @@ class ReportController extends Controller
                 DB::raw('SUM(price) as total_amount'),
                 DB::raw('SUM(added_costs) as other_cogs')
             )
-            ->whereBetween(DB::raw('DATE(created_at)'), [$start_date, $end_date])
+            ->whereBetween('created_at', [$start_date, $end_date])
             ->groupBy('purchase_date')
             ->orderBy('purchase_date')
             ->get();
@@ -356,7 +500,7 @@ class ReportController extends Controller
                 DB::raw('DATE(created_at) as purchase_date'),
                 DB::raw('SUM(amount) as total_amount')
             )
-            ->whereBetween(DB::raw('DATE(created_at)'), [$start_date, $end_date])
+            ->whereBetween('created_at', [$start_date, $end_date])
             ->whereHas('type', function ($query) {
                 $query->where('expenditure_type', 'cogs');
             })
@@ -386,11 +530,13 @@ class ReportController extends Controller
     }
 
     public function getPaymentMethodPerformance(Request $request){
+        $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
+        $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
         $methods = ['cash', 'transfer', 'card', 'wallet', 'on_credit', 'pos', 'split', "complementary"];
         $payment_method_distr = [];
         foreach ($methods as $key => $method) {
             $sales = Transaction::where('type', 'sold')
-                        ->whereBetween(DB::raw('DATE(created_at)'), [$request['start_date'], $request['end_date']])
+                        ->whereBetween('created_at', [$start_date, $end_date])
                         ->where('status', 'completed')
                         ->where('payment_method', $method)
                         ->sum('amount');
@@ -421,29 +567,30 @@ class ReportController extends Controller
       
         //   const grossProfitMargin = computed(() => (grossProfit.value / turnover.value) * 100);
         //   const netMargin = computed(() => (netProfit.value / turnover.value) * 100);
-        $start_date  = $request['start_date'];
-        $end_date = $request['end_date'];
+        $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
+        $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
         $validated = Validator::make($request->all(), [
             'start_date' => 'required',
             'end_date' => 'required'
         ]);
         $sales = Transaction::where('type', 'sold')
-                    ->whereBetween(DB::raw('DATE(created_at)'), [$request['start_date'], $request['end_date']])
+                    ->whereBetween('created_at', [$start_date, $end_date])
                     ->where('status', 'completed')
                     ->sum('amount');
 
         $turnover = $sales;
         
-        $cogs = Purchase::whereBetween(DB::raw('DATE(created_at)'), [$start_date, $end_date])
+        $cogs = Purchase::whereBetween('created_at', [$start_date, $end_date])
                 ->sum(DB::raw('price + added_costs'));
 
-        $opex = Expenditure::whereBetween(DB::raw('DATE(created_at)'), [$start_date, $end_date])->whereHas('type', function ($query) {
+        $opex = Expenditure::whereBetween('created_at', [$start_date, $end_date])->whereHas('type', function ($query) {
                     $query->where('expenditure_type', 'opex'); // Assuming 'name' is a column in the expenditure_type table
                 })->sum('amount');
 
-        $cogs_exp = Expenditure::whereBetween(DB::raw('DATE(created_at)'), [$start_date, $end_date])->whereHas('type', function ($query) {
-                        $query->where('expenditure_type', 'cogs'); // Assuming 'name' is a column in the expenditure_type table
-                })->sum('amount');
+        $cogs_exp = Expenditure::whereBetween('created_at', [$start_date, $end_date])
+                                    ->whereHas('type', function ($query) {
+                                            $query->where('expenditure_type', 'cogs'); // Assuming 'name' is a column in the expenditure_type table
+                                    })->sum('amount');
         
         $gross_profit = $turnover - ($cogs + $cogs_exp);
         $total_expenditure = $opex + $cogs + $cogs_exp;
@@ -460,11 +607,54 @@ class ReportController extends Controller
             "net_profit" => $net_profit,
             "gross_profit_margin" => $gross_profit_margin,
             "net_profit_margin" => $net_profit_margin,
+            "lets_See" => $this->opening_time."=".$this->closing_time,
+            "accounting_balance" => $this->getAccountingBalance($start_date, $end_date)
+
         ];
 
         return res_success('success', $result);
 
     }
+
+    public function getAccountingBalance($start_date, $end_date)
+    {
+    
+        // Opening Cash Balance (sold transactions before start_date)
+        $opening_cash = Transaction::where('type', 'sold')
+            ->where('created_at', '<', $start_date)
+            ->where('status', 'completed')
+            ->sum('amount');
+    
+        // Opening Receivables Balance (on_credit transactions before start_date)
+        $opening_receivables = Transaction::where('type', 'on_credit')
+            ->where('created_at', '<', $start_date)
+            ->where('status', 'completed')
+            ->sum('amount');
+    
+        // Total Cash (sold transactions within period)
+        $cash_within_period = Transaction::where('type', 'sold')
+            ->whereBetween('created_at', [$start_date, $end_date])
+            ->where('status', 'completed')
+            ->sum('amount');
+    
+        // Total Receivables (on_credit transactions within period)
+        $receivables_within_period = Transaction::where('type', 'on_credit')
+            ->whereBetween('created_at', [$start_date, $end_date])
+            ->where('status', 'completed')
+            ->sum('amount');
+    
+        // Calculate Closing Balances
+        $closing_cash = $opening_cash + $cash_within_period;
+        $closing_receivables = $opening_receivables + $receivables_within_period;
+    
+        return  [
+            "opening_cash_balance" => $opening_cash,
+            "opening_receivables_balance" => $opening_receivables,
+            "closing_cash_balance" => $closing_cash,
+            "closing_receivables_balance" => $closing_receivables
+        ];
+    }
+    
 
 
 }
