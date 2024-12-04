@@ -139,9 +139,11 @@ class ProductRepository implements ProductRepositoryInterface{
         $user = Auth::user()->id;
 
         for ($i=0; $i < count($request['purchase']); $i++) {
+            $previous_stock = Product::where('id', $request['purchase'][$i]["product_id"])->first();
             $purchase = PurchaseDetails::create([
                 "purchase_id" => $new_order->id,
                 "product_id" => $request['purchase'][$i]["product_id"],
+                "previous_stock" => $previous_stock['stock'],
                 "qty"=>$request['purchase'][$i]['qty'],
                 "cost"=>$request['purchase'][$i]['cost']
             ]);

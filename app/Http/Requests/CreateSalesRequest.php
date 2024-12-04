@@ -41,7 +41,8 @@ class CreateSalesRequest extends FormRequest
             'description' => 'nullable',
             'is_order'=> 'required',
             'amount' => 'sometimes',
-            'payment_method' => 'sometimes'
+            'payment_method' => 'sometimes',
+            'customer_id' => 'sometimes'
         ];
     }
 }

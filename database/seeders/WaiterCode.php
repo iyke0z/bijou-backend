@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\WaiterCode;
+use App\Models\WaiterCode as Code;
 
 class WaiterCode extends Seeder
 {
@@ -43,7 +43,7 @@ class WaiterCode extends Seeder
                 'user_id' =>$dat[$i]['user_id'],
                 'code' => $dat[$i]['code'],
             ];
-            WaiterCode::create($product);
+            Code::create($code);
         }
     }
 }
