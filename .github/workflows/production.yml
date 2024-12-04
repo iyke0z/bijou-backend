@@ -42,7 +42,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}  # SSH password
           port: 22                               # SSH port
           script: |
-            cd /home/ngmktsit/business_siteswww/enterprise/api  # Navigate to the first folder
+            cd /home/ngmktsit/business_sites/www/enterprise/api  # Navigate to the first folder
             php artisan migrate
             php artisan clean
             
@@ -64,7 +64,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}  # SSH password
           port: 22                               # SSH port
           script: |
-            cd /home/ngmktsit/business_siteswww/aromaperk/api  # Navigate to the second folder
+            cd /home/ngmktsit/business_sites/www/aromaperk/api  # Navigate to the second folder
             php artisan migrate
             php artisan clean
             
@@ -86,7 +86,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}  # SSH password
           port: 22                               # SSH port
           script: |
-            cd /home/ngmktsit/business_siteswww/bingoml/api  # Navigate to the second folder
+            cd /home/ngmktsit/business_sites/www/bingoml/api  # Navigate to the second folder
             php artisan migrate
             php artisan clean
 # 
@@ -108,7 +108,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}  # SSH password
           port: 22                               # SSH port
           script: |
-            cd /home/ngmktsit/business_siteswww/phlorah/api  # Navigate to the second folder
+            cd /home/ngmktsit/business_sites/www/phlorah/api  # Navigate to the second folder
             php artisan migrate
             php artisan clean 
 # 
@@ -130,7 +130,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}  # SSH password
           port: 22                               # SSH port
           script: |
-            cd /home/ngmktsit/business_siteswww/chosenconcept/api  # Navigate to the second folder
+            cd /home/ngmktsit/business_sites/www/chosenconcept/api  # Navigate to the second folder
             php artisan clean 
 # 
       - name: Upload Files to fitandfeet/api
@@ -151,7 +151,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}  # SSH password
           port: 22                               # SSH port
           script: |
-            cd /home/ngmktsit/business_siteswww/fitandfeet/api  # Navigate to the second folder
+            cd /home/ngmktsit/business_sites/www/fitandfeet/api  # Navigate to the second folder
             php artisan clean 
 # 
       - name: Upload Files to edzain/api
@@ -172,7 +172,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}  # SSH password
           port: 22                               # SSH port
           script: |
-            cd /home/ngmktsit/business_siteswww/edzain/api  # Navigate to the second folder
+            cd /home/ngmktsit/business_sites/www/edzain/api  # Navigate to the second folder
             php artisan migrate
             php artisan clean
       - name: Upload Files to totech/api
@@ -193,6 +193,6 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}  # SSH password
           port: 22                               # SSH port
           script: |
-            cd /home/ngmktsit/business_siteswww/totech/api  # Navigate to the second folder
+            cd /home/ngmktsit/business_sites/www/totech/api  # Navigate to the second folder
             php artisan migrate
             php artisan clean 
