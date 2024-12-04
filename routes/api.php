@@ -49,12 +49,9 @@ Route::prefix('v1')->group(function (){
     Route::get('food-orders', [TransactionController::class, "food_prep_status"]);
     Route::get('drink-orders', [TransactionController::class, "drinks_prep_status"]);
     Route::post('update-prep-status', [TransactionController::class, "update_prep_status"])->middleware('IaActive');
-    Route::get('product/', [ProductController::class, 'all_products']);
-    Route::get('customer/all', [CustomerController::class, 'all_customers']);
     Route::get('banks/', [AuthController::class, 'all_banks']);
     Route::get('get-expiration', [AuthController::class, 'get_expiration']);
     Route::post('login', [AuthController::class, 'login'])->name('login');
-    Route::get('/business/details', [AuthController::class, 'show_business']);
     Route::post('/business/create', [AuthController::class, 'create_business_details'])->middleware('IaActive');
     Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', function (Request $request) {
@@ -68,6 +65,10 @@ Route::prefix('v1')->group(function (){
             ->find($request->user()->id);
             return $user;
         });
+        Route::get('customer/all', [CustomerController::class, 'all_customers']);
+        Route::get('product/', [ProductController::class, 'all_products']);
+
+        Route::get('/business/details', [AuthController::class, 'show_business']);
         Route::post('logout', [AuthController::class, 'logout']);
         Route::prefix('user')->group(function (){
             Route::post('create', [UserController::class, 'create_user'])->middleware('IaActive')->middleware('IaActive');
