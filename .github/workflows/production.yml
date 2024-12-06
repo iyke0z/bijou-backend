@@ -17,24 +17,24 @@ jobs:
       - name: Identify Changed Folders
         id: detect-changes
         run: |
-          CHANGED_FOLDERS=$(git diff --dirstat=files,0 HEAD^ HEAD | cut -d'/' -f1 | sort -u | grep -E 'enterprise|aromaperk|bingoml|phlorah|chosenconcept|fitandfeet|edzain|totech' || echo "")
+          CHANGED_FOLDERS=$(git diff --dirstat=files,0 HEAD^ HEAD | cut -d'/' -f1 | sort -u | grep -E 'amasemporium|aromaperk|bingoml|phlorah|chosenconcept|fitandfeet|edzain|totech' || echo "")
           echo "CHANGED_FOLDERS=$CHANGED_FOLDERS" >> $GITHUB_ENV
           if [ -z "$CHANGED_FOLDERS" ]; then
             echo "No changes detected. Skipping deployment."
             exit 0
           fi
 # 
-      - name: Upload Files to enterprise/api
+      - name: Upload Files to amasemporium/api
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.FTP_HOST }}    # Server hostname
           username: ${{ secrets.FTP_USERNAME }}  # SFTP username
           password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
           source: ./                         # Local directory with test files
-          target: ${{ secrets.FTP_PATH }}/business_sites/enterprise/api/  # Target directory on the server
+          target: ${{ secrets.FTP_PATH }}/business_sites/amasemporium/api/  # Target directory on the server
           port: 22                            # SFTP port
 
-      - name: Run PHP Artisan Command on enterprise/api
+      - name: Run PHP Artisan Command on amasemporium/api
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.FTP_HOST }}          # Server hostname
@@ -42,7 +42,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}  # SSH password
           port: 22                               # SSH port
           script: |
-            cd /home/ngmktsit/www/business_sites/enterprise/api  # Navigate to the first folder
+            cd /home/ngmktsit/www/business_sites/amasemporium/api  # Navigate to the first folder
             php artisan migrate
             php artisan clean
             
@@ -175,24 +175,24 @@ jobs:
             cd /home/ngmktsit/www/business_sites/edzain/api  # Navigate to the second folder
             php artisan migrate
             php artisan clean
-      - name: Upload Files to totech/api
-        uses: appleboy/scp-action@v0.1.5
-        with:
-          host: ${{ secrets.FTP_HOST }}    # Server hostname
-          username: ${{ secrets.FTP_USERNAME }}  # SFTP username
-          password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
-          source: ./                         # Local directory with test files
-          target: ${{ secrets.FTP_PATH }}/business_sites/totech/api/  # Target directory on the server
-          port: 22                            # SFTP port
+      # - name: Upload Files to totech/api
+      #   uses: appleboy/scp-action@v0.1.5
+      #   with:
+      #     host: ${{ secrets.FTP_HOST }}    # Server hostname
+      #     username: ${{ secrets.FTP_USERNAME }}  # SFTP username
+      #     password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
+      #     source: ./                         # Local directory with test files
+      #     target: ${{ secrets.FTP_PATH }}/business_sites/totech/api/  # Target directory on the server
+      #     port: 22                            # SFTP port
 
-      - name: Run PHP Artisan Command on totech/api
-        uses: appleboy/ssh-action@v0.1.6
-        with:
-          host: ${{ secrets.FTP_HOST }}          # Server hostname
-          username: ${{ secrets.FTP_USERNAME }}  # SSH username
-          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
-          port: 22                               # SSH port
-          script: |
-            cd /home/ngmktsit/www/business_sites/totech/api  # Navigate to the second folder
-            php artisan migrate
-            php artisan clean 
+      # - name: Run PHP Artisan Command on totech/api
+      #   uses: appleboy/ssh-action@v0.1.6
+      #   with:
+      #     host: ${{ secrets.FTP_HOST }}          # Server hostname
+      #     username: ${{ secrets.FTP_USERNAME }}  # SSH username
+      #     password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+      #     port: 22                               # SSH port
+      #     script: |
+      #       cd /home/ngmktsit/www/business_sites/totech/api  # Navigate to the second folder
+      #       php artisan migrate
+      #       php artisan clean 
