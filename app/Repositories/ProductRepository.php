@@ -97,7 +97,7 @@ class ProductRepository implements ProductRepositoryInterface{
                     ]);
                     $user = Auth::user()->id;
                     ProductTrait::log_product($id, 'update', $request['stock'], $request['price'], $user);
-                return res_success('category updated', $product);
+                return res_success('product updated', $product);
             // }else{
             //     return res_bad_request('code exists');
             // }

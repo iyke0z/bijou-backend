@@ -67,9 +67,11 @@ class TransactionRepository implements TransactionRepositoryInterface{
             $request['is_order'] == false ? $transaction->amount  = $request['amount'] : null;
             $request['is_order'] == false ? $transaction->payment_method = $request['payment_method'] : null;
             $transaction->table_description = $request['description'];
+            $transaction->customer_id = $request['customer_id'] ?? $request['customer_id'];
             $transaction->save();
             // create new sales order
 
+            
             for ($i=0; $i < count($request['products']) ; $i++) {
                 $product = Product::where('id',$request['products'][$i]["product_id"])->first();
                 if($product->category_id == 2){
