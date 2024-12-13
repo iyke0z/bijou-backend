@@ -14,18 +14,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
         
-      - name: Identify Changed Folders
-        id: detect-changes
-        run: |
-          # Identify changed folders using git diff
-          CHANGED_FOLDERS=$(git diff --dirstat=files,0 HEAD^ HEAD | cut -d'/' -f1 | sort -u | grep -E 'amasemporium|aromaperk|bingoml|phlorah|chosenconcept|fitandfeet|edzain|totech' || echo "")
-          echo "Changed Folders: $CHANGED_FOLDERS"
-          echo "CHANGED_FOLDERS=$CHANGED_FOLDERS" >> $GITHUB_ENV
-          if [ -z "$CHANGED_FOLDERS" ]; then
-            echo "No changes detected. Skipping deployment."
-            exit 0
-          fi
-
+     
       # Define deployment steps for folders
       - name: Deploy to Folders
         run: |
