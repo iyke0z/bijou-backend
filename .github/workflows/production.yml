@@ -197,8 +197,8 @@ jobs:
             cd /home/ngmktsit/www/business_sites/totech/api  # Navigate to the second folder
             php artisan migrate
             php artisan clean 
-      #
-       - name: Upload Files to jomarsgroups/api
+      
+      - name: Upload Files to jomarsgroups/api
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.FTP_HOST }}    # Server hostname
