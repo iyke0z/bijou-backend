@@ -197,3 +197,26 @@ jobs:
             cd /home/ngmktsit/www/business_sites/totech/api  # Navigate to the second folder
             php artisan migrate
             php artisan clean 
+      #
+       - name: Upload Files to jomarsgroups/api
+        uses: appleboy/scp-action@v0.1.5
+        with:
+          host: ${{ secrets.FTP_HOST }}    # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SFTP username
+          password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
+          source: ./                         # Local directory with test files
+          target: ${{ secrets.FTP_PATH }}/business_sites/jomarsgroups/api/  # Target directory on the server
+          port: 22                            # SFTP port
+
+      - name: Run PHP Artisan Command on jomarsgroups/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/business_sites/jomarsgroups/api  # Navigate to the second folder
+            php artisan migrate
+            php artisan clean 
+            
