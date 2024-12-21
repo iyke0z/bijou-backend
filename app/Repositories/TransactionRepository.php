@@ -71,10 +71,9 @@ class TransactionRepository implements TransactionRepositoryInterface{
             $transaction->save();
             // create new sales order
 
-            
             for ($i=0; $i < count($request['products']) ; $i++) {
-                $product = Product::where('id',$request['products'][$i]["product_id"])->first();
-                if($product->category_id == 2){
+                $product = Product::with('category')->where('id',$request['products'][$i]["product_id"])->first();
+                if($product->category->has_stock == 1){
                     $product->stock = $product->stock - $request['products'][$i]["qty"];
                     $product->save();
                 }
@@ -171,6 +170,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
                     $split_payment->save();
                 }
             }
+
             if($request['payment_method'] == "wallet" || $request['payment_method'] == 'on_credit'){
                 $customer = Customer::find($request["customer_id"]);
                 $customer->wallet_balance = $customer->wallet_balance - $request["amount"];
