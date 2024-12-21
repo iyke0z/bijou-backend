@@ -219,4 +219,37 @@ jobs:
             cd /home/ngmktsit/www/business_sites/jomarsgroups/api  # Navigate to the second folder
             php artisan migrate
             php artisan clean 
+      - name: Run PHP Artisan Command on royalrelish/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/business_sites/royalrelish/api  # Navigate to the second folder
+            php artisan migrate
+            php artisan clean
+      - name: Run PHP Artisan Command on hairarena/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/business_sites/hairarena/api  # Navigate to the second folder
+            php artisan migrate
+            php artisan clean 
+      - name: Run PHP Artisan Command on osasumwenbyfd/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/business_sites/osasumwenbyfd/api  # Navigate to the second folder
+            php artisan migrate
+            php artisan clean 
             

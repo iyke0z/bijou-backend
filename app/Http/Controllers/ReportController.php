@@ -586,6 +586,33 @@ class ReportController extends Controller
         $opex = Expenditure::whereBetween('created_at', [$start_date, $end_date])->whereHas('type', function ($query) {
                     $query->where('expenditure_type', 'opex'); // Assuming 'name' is a column in the expenditure_type table
                 })->sum('amount');
+        
+        $assets = Expenditure::with('type')->whereHas('type', function ($query) {
+            $query->where('expenditure_type', 'capex');})->get();
+
+        $annual_depreciation = 0;
+        $monthly_depreciation = 0;
+        // Loop through each asset
+        foreach ($assets as $asset) {
+            $amount = $asset->amount;
+            $usefulLife = $asset->type->useful_life * 12;
+            $sal_val = $asset->type->salvage_value;
+    
+            // Calculate salvage value (13.3% of amount)
+            $salvageValue = $amount * ($sal_val/100);
+    
+            // Calculate depreciable amount
+            $depreciableAmount = $amount - $salvageValue;
+    
+            // Calculate annual depreciation
+            $annualDepreciation = $depreciableAmount / $usefulLife;
+            $annual_depreciation += $annualDepreciation;
+    
+            // Calculate monthly depreciation
+            $monthlyDepreciation = $annualDepreciation / 12;
+            $monthly_depreciation += $monthlyDepreciation;
+
+        }
 
         $cogs_exp = Expenditure::whereBetween('created_at', [$start_date, $end_date])
                                     ->whereHas('type', function ($query) {
@@ -593,7 +620,8 @@ class ReportController extends Controller
                                     })->sum('amount');
         
         $gross_profit = $turnover - ($cogs + $cogs_exp);
-        $total_expenditure = $opex + $cogs + $cogs_exp;
+
+        $total_expenditure = $opex + $cogs + $cogs_exp + $monthly_depreciation;
         $net_profit = $turnover - $total_expenditure;
         $gross_profit_margin = $turnover > 0 ? ($gross_profit/$turnover) * 100 :0;
         $net_profit_margin = $turnover > 0 ? ($net_profit/$turnover) * 100 : 0;
@@ -603,6 +631,7 @@ class ReportController extends Controller
             "cogs" => $cogs + $cogs_exp,
             "opex" => $opex,
             "gross_profit" => $gross_profit,
+            "depreciation" => $monthly_depreciation,
             "total_expenditure" => $total_expenditure,
             "net_profit" => $net_profit,
             "gross_profit_margin" => $gross_profit_margin,

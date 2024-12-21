@@ -20,6 +20,7 @@ class ExpenditureController extends Controller
                     'name' => $request['name'],
                     'expenditure_type' => $request['expenditure_type'],
                     'user_id' => Auth::user()->id,
+                    'useful_life' => $request['useful_life']
                 ]);
                 return res_completed('created');
             }
@@ -36,6 +37,7 @@ class ExpenditureController extends Controller
                     'name' => $request['name'],
                     'expenditure_type' => $request['expenditure_type'],
                     'user_id' => Auth::user()->id,
+                    'useful_life' => $request['useful_life']
                 ]);
                 return res_completed('updated');
             }
