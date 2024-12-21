@@ -131,6 +131,7 @@ jobs:
           port: 22                               # SSH port
           script: |
             cd /home/ngmktsit/www/business_sites/chosenconcept/api  # Navigate to the second folder
+            php artisan migrate
             php artisan clean 
 # 
       - name: Upload Files to fitandfeet/api
@@ -152,6 +153,7 @@ jobs:
           port: 22                               # SSH port
           script: |
             cd /home/ngmktsit/www/business_sites/fitandfeet/api  # Navigate to the second folder
+            php artisan migrate
             php artisan clean 
 # 
       - name: Upload Files to edzain/api
@@ -251,5 +253,4 @@ jobs:
           script: |
             cd /home/ngmktsit/www/business_sites/osasumwenbyfd/api  # Navigate to the second folder
             php artisan migrate
-            php artisan clean 
-            
+            php artisan clean
