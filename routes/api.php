@@ -40,7 +40,7 @@ Route::prefix('v1')->group(function (){
         Route::put('update-package/{id}', [SuperAdminController::class, 'updatePackage']);
         Route::delete('delete-package/', [SuperAdminController::class, 'deletePackage']);
         Route::post('business/create', [AuthController::class, 'create_business_details']);
-        Route::post('create/user', [UserController::class, 'create_user'])->middleware('IaActive');
+        Route::post('create/user', [UserController::class, 'create_user']);
     });
         // Auth
     Route::post('sell/', [TransactionController::class, 'sell'])->middleware('IaActive');
