@@ -20,8 +20,6 @@ class IaActive
 
     public function handle($request, Closure $next)
     {
-
-       
         // Fetch active status details
         $active_status = BusinessDetails::first();
 

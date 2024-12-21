@@ -39,6 +39,8 @@ Route::prefix('v1')->group(function (){
         Route::post('create-package', [SuperAdminController::class, 'createPackage']);
         Route::put('update-package/{id}', [SuperAdminController::class, 'updatePackage']);
         Route::delete('delete-package/', [SuperAdminController::class, 'deletePackage']);
+        Route::post('business/create', [AuthController::class, 'create_business_details']);
+        Route::post('create/user', [UserController::class, 'create_user'])->middleware('IaActive');
     });
         // Auth
     Route::post('sell/', [TransactionController::class, 'sell'])->middleware('IaActive');
@@ -71,20 +73,20 @@ Route::prefix('v1')->group(function (){
         Route::get('/business/details', [AuthController::class, 'show_business']);
         Route::post('logout', [AuthController::class, 'logout']);
         Route::prefix('user')->group(function (){
-            Route::post('create', [UserController::class, 'create_user'])->middleware('IaActive')->middleware('IaActive');
+            Route::post('create', [UserController::class, 'create_user'])->middleware('IaActive');
             Route::get('{id}', [UserController::class, 'get_user'])->middleware('IaActive');
-            Route::post('update/{id}', [UserController::class, 'update_user'])->middleware('IaActive')->middleware('IaActive');
-            Route::post('assign/{id}', [UserController::class, 'assign_user_priviledge'])->middleware('IaActive')->middleware('IaActive');
-            Route::post('delete/{id}', [UserController::class,  'delete_user'])->middleware('IaActive')->middleware('IaActive');
+            Route::post('update/{id}', [UserController::class, 'update_user'])->middleware('IaActive');
+            Route::post('assign/{id}', [UserController::class, 'assign_user_priviledge'])->middleware('IaActive');
+            Route::post('delete/{id}', [UserController::class,  'delete_user'])->middleware('IaActive');
             Route::get('/', [UserController::class,  'all_users']);
         });
         Route::get('roles',[UserController::class,'all_roles'])->middleware('IaActive');
         Route::get('priviledges',[UserController::class,'all_priviledges'])->middleware('IaActive');
-        Route::post('role/create',[UserController::class,'create_role'])->middleware('IaActive')->middleware('IaActive');
-        Route::post('role/delete/{id}',[UserController::class,'delete_role'])->middleware('IaActive')->middleware('IaActive');
-        Route::post('priviledge/create',[UserController::class,'create_priviledge'])->middleware('IaActive')->middleware('IaActive');
-        Route::post('priviledge/delete/{id}',[UserController::class,'delete_priviledge'])->middleware('IaActive')->middleware('IaActive');
-        Route::post('assign/role/{id}', [UserController::class, 'assign_role_priviledge'])->middleware('IaActive')->middleware('IaActive');
+        Route::post('role/create',[UserController::class,'create_role'])->middleware('IaActive');
+        Route::post('role/delete/{id}',[UserController::class,'delete_role'])->middleware('IaActive');
+        Route::post('priviledge/create',[UserController::class,'create_priviledge'])->middleware('IaActive');
+        Route::post('priviledge/delete/{id}',[UserController::class,'delete_priviledge'])->middleware('IaActive');
+        Route::post('assign/role/{id}', [UserController::class, 'assign_role_priviledge'])->middleware('IaActive');
         Route::prefix('category')->group(function (){
             Route::post('/create', [ProductController::class, 'create_category'])->middleware('IaActive');
             Route::post('/update/{id}', [ProductController::class, 'update_category'])->middleware('IaActive');
