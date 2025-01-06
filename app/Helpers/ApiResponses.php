@@ -2,6 +2,28 @@
 
 use App\Models\BusinessTime;
 
+if (!function_exists('applyShopFilter')) {
+    function applyShopFilter($query, $shopId)
+        {
+            if (!is_null($shopId) && $shopId != 0) {
+                return $query->where('shop_id', $shopId);
+            }
+            return $query;
+        }
+}
+
+if (!function_exists('functionalities')) {
+    function functionalities(){
+        $functionalities = [
+            [
+                "id",
+                "name"
+            ]
+        ];
+        return $functionalities;
+    }
+}
+
 if (!function_exists('res_auth_success')) {
     function res_auth_success($message, $data, $auth_token)
     {

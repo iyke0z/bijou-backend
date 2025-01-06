@@ -57,13 +57,17 @@ class ProductController extends Controller
         return $this->productRepo->generate_product_report($validated, $id);
     }
 
-    public function all_Products(){
-        $all_Product = Product::with('category')->with('images')->orderBy('name', 'ASC')->get();
+    public function all_Products(Request $request){
+        $shopId = $request->query('shop_id');
+
+        $all_Product = applyShopFilter(Product::with('category')->with('images')->orderBy('name', 'ASC'), $shopId)->get();
         return res_success('all products', $all_Product);
     }
 
-    public function general_generate_product_report($id){
-        $report = Product::with('category')->with(
+    public function general_generate_product_report($id, Request $request){
+        $shopId = $request->query('shop_id');
+
+        $report = applyShopFilter(Product::with('category')->with(
             ['sales' => function($q) {
                 $q->select('sales.*','users.fullname')->join('users', 'sales.user_id', 'users.id');
             }]
@@ -73,12 +77,14 @@ class ProductController extends Controller
                         ->join('purchases', 'purchase_details.purchase_id', 'purchases.id')
                         ->join('users', 'purchases.user_id', 'users.id');
                 }]
-            )->find($id);
+            ), $shopId)->find($id);
         return res_success('report', $report);
     }
 
-    public function all_categories(){
-        $all_categories = Category::with('products')->get();
+    public function all_categories(Request $request){
+        $shopId = $request->query('shop_id');
+
+        $all_categories = applyShopFilter(Category::with('products'), $shopId)->get();
         $categories = [];
         foreach ($all_categories as $category) {
             array_push($categories, new CategoryResource($category));
@@ -93,11 +99,10 @@ class ProductController extends Controller
             $request['image']->move(public_path('images/product'), $picture);
         }
         $data = ["product_id"=> $request['product_id'], "image" => $picture];
+
         ProductImages::create($data);
 
-
         return res_completed('images stored');
-
     }
 
     public function new_purchase(CreatePurchaseRequest $request){
@@ -117,19 +122,23 @@ class ProductController extends Controller
         return $this->productRepo->delete_purchase($id);
     }
 
-    public function all_purchases(){
-        $all =  Purchase::with('user')->with(['purchase_detail' => function($q) {
-            $q->with('product');
-        }])->get();
+    public function all_purchases(Request $request){
+        $shopId = $request->query('shop_id');
+
+        $all =  applyShopFilter(Purchase::with('user')->with(['purchase_detail' => function($q) {
+                    $q->with('product');
+                }]), $shopId)->get();
         return res_success('all purchases', $all);
     }
 
     public function purchase_report(Request $request){
-        $all =  Purchase::whereBetween(DB::raw('DATE(`created_at`)'), [$request['start_date'], $request['end_date']])
+        $shopId = $request->query('shop_id');
+
+        $all =  applyShopFilter(Purchase::whereBetween(DB::raw('DATE(`created_at`)'), [$request['start_date'], $request['end_date']])
         ->with('user')
         ->with(['purchase_detail' => function($q) {
             $q->join('products', 'purchase_details.product_id', 'products.id');
-        }])
+        }]), $shopId)
         ->get();
         return res_success('purchase report', $all);
     }

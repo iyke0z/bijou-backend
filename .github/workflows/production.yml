@@ -254,3 +254,25 @@ jobs:
             cd /home/ngmktsit/www/business_sites/osasumwenbyfd/api  # Navigate to the second folder
             php artisan migrate
             php artisan clean
+      - name: Run PHP Artisan Command on standardchoice/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/business_sites/standardchoice/api  # Navigate to the second folder
+            php artisan migrate
+            php artisan clean
+      - name: Run PHP Artisan Command on ugbommaintefarms/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/business_sites/ugbommaintefarms/api  # Navigate to the second folder
+            php artisan migrate
+            php artisan clean

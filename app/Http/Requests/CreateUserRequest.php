@@ -35,7 +35,9 @@ class CreateUserRequest extends FormRequest
             "password"=>'required',
             'dob'=>'required',
             'picture'=>'nullable',
-            'gender'=>'required'
+            'gender'=>'required',
+            'shop_id'=>'required',
+
         ];
     }
     protected function failedValidation(Validator $validator)

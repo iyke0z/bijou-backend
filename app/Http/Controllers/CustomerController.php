@@ -31,8 +31,10 @@ class CustomerController extends Controller
     public function customer_details($id){
         return $this->customerRepo->customer_details($id);
     }
-    public function all_customers(){
-        $all = Customer::with('transactions')->get();
+    public function all_customers(Request $request){
+        $shopId = $request->query('shop_id');
+
+        $all = applyShopFilter(Customer::with('transactions'), $shopId)->get();
         return res_success('customers', $all);
     }
 }

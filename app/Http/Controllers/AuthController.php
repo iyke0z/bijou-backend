@@ -111,8 +111,11 @@ class AuthController extends Controller
     }
 
     public function create_bank(Request $request){
+        $shopId = request()->query('shop_id');
+
         Banks::create([
-            'name' => $request['name']
+            'name' => $request['name'],
+            'shop_id' => $shopId
         ]);
 
         return res_completed('bank created');
@@ -140,7 +143,8 @@ class AuthController extends Controller
     }
 
     public function all_banks(){
-        $banks = Banks::all();
+        $shopId = request()->query('shop_id');
+        $banks = Banks::where('shop_id', $shopId )->get();
 
         return res_success('banks', $banks);
     }

@@ -21,6 +21,7 @@ class ReportController extends Controller
 {
     public $opening_time;
     public $closing_time;
+    public $shopId;
     public function __construct(){
         $businessTime = getBusinessTime();
         $this->opening_time = $businessTime['start_time'] ?? "00:00";
@@ -29,6 +30,7 @@ class ReportController extends Controller
     public function general_report(Request $request){
         $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
         $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
+        $shopId = $request->query('shop_id');
 
         $validated = Validator::make($request->all(), [
             'start_date' => 'required',
@@ -37,7 +39,7 @@ class ReportController extends Controller
         ]);
 
         if($validated){
-            $getTransactions = Transaction::whereBetween('created_at', [$start_date, $end_date])
+            $getTransactions = applyShopFilter(Transaction::whereBetween('created_at', [$start_date, $end_date])
                                     ->with('customer')
                                     ->with(['user' => function ($q) {
                                         $q->withTrashed();
@@ -46,18 +48,18 @@ class ReportController extends Controller
                                         $q->join('products', 'sales.product_id', 'products.id')->withTrashed();
                                     }])
                                     ->orderBy('id', 'desc')
-                                    ->withTrashed()->get();
+                                    ->withTrashed(), $shopId)->get();
                 
-                $get_sales = Sales::join('transactions', 'sales.ref', 'transactions.id')
+                $get_sales = applyShopFilter(Sales::join('transactions', 'sales.ref', 'transactions.id')
                                 ->whereBetween('transactions.created_at', [$start_date, $end_date])
                                 ->where('transactions.status', '!=', 'cancelled')
-                                ->with('product')->with('user')->get();
+                                ->with('product')->with('user'), $shopId)->get();
             
-                $get_purchases = PurchaseDetails::whereBetween('created_at', [$start_date, $end_date])
-                                    ->with('purchase')->with('product')->get();
+                $get_purchases = applyShopFilter( PurchaseDetails::whereBetween('created_at', [$start_date, $end_date])
+                                    ->with('purchase')->with('product'), $shopId)->get();
 
-                $get_expenditures = Expenditure::whereBetween('created_at', [$start_date, $end_date])
-                                    ->with('type')->with('user')->get();
+                $get_expenditures = applyShopFilter(Expenditure::whereBetween('created_at', [$start_date, $end_date])
+                                    ->with('type')->with('user'), $shopId)->get();
 
             $report = [
                 'transaction' => $getTransactions,
@@ -77,19 +79,20 @@ class ReportController extends Controller
             'start_date' => 'required',
             'end_date' => 'required'
         ]);
+        $shopId = $request->query('shop_id');
 
         if($validated){
-            $getTransactions = Transaction::whereBetween('created_at', [$start_date , $end_date])
+            $getTransactions = applyShopFilter(Transaction::whereBetween('created_at', [$start_date , $end_date])
                                 ->where('type', 'cancelled')
                                 ->with('customer')
                                 ->with(['sales' => function($q){
                                     $q->join('products', 'sales.product_id', 'products.id');
-                                }])->get();
+                                }]), $shopId)->get();
 
-            $get_sales = Sales::whereBetween('created_at', [$start_date, $end_date])
+            $get_sales = applyShopFilter(Sales::whereBetween('created_at', [$start_date, $end_date])
                                 ->where('type', 'cancelled')
                                 ->with('product')
-                                ->with('user')->get();
+                                ->with('user'), $shopId)->get();
             $report = [
                 'transaction' => $getTransactions,
                 'sales' => $get_sales,
@@ -98,13 +101,13 @@ class ReportController extends Controller
             return res_success('report', $report);
 
         }
-
     }
 
     public function generate_sales_report(Request $request){
         $user = $request['user_id'];
         $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
         $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
+        $shopId = $request->query('shop_id');
 
         $validated = Validator::make($request->all(), [
             'start_date' => 'required',
@@ -114,9 +117,8 @@ class ReportController extends Controller
 
         if ($validated) {
             // Fetch transactions within the given date range
-            $transactions = Transaction::whereBetween(DB::raw('created_at'), [$start_date, $end_date])
-                ->where('user_id', $user)
-                ->get();
+            $transactions = applyShopFilter(Transaction::whereBetween(DB::raw('created_at'), [$start_date, $end_date])
+                                            ->where('user_id', $user),$shopId)->get();
         
             // Calculate total amounts for all payment methods
             $total_paid = $transactions->sum("amount");
@@ -128,31 +130,29 @@ class ReportController extends Controller
             $complementary_total = $transactions->where("payment_method", "complementary")->sum("amount");
         
             // Fetch split payment details
-            $split_payments = SplitPayments::select('split_payments.*')
-                ->join('transactions', 'split_payments.transaction_id', 'transactions.id')
-                ->whereBetween(DB::raw('split_payments.created_at'), [$start_date, $end_date])
-                ->where('transactions.user_id', $user)
-                ->get();
+            $split_payments = applyShopFilter(SplitPayments::select('split_payments.*')
+                                ->join('transactions', 'split_payments.transaction_id', 'transactions.id')
+                                ->whereBetween(DB::raw('split_payments.created_at'), [$start_date, $end_date])
+                                ->where('transactions.user_id', $user),$shopId)->get();
         
             $split_payment_card = $split_payments->where("payment_method", "card")->sum("amount");
             $split_payment_cash = $split_payments->where("payment_method", "cash")->sum("amount");
             $split_payment_transfer = $split_payments->where("payment_method", "transfer")->sum("amount");
         
             // Fetch sales within the given date range
-            $sales = Sales::select(DB::raw('sum(price * qty) as amount'))
-                ->join('transactions', 'sales.ref', 'transactions.id')
-                ->where('transactions.user_id', $user)
-                ->whereBetween(DB::raw('sales.created_at'), [$start_date, $end_date])
-                ->first();
+            $sales = applyShopFilter(Sales::select(DB::raw('sum(price * qty) as amount'))
+                        ->join('transactions', 'sales.ref', 'transactions.id')
+                        ->where('transactions.user_id', $user)
+                        ->whereBetween(DB::raw('sales.created_at'), [$start_date, $end_date]), $shopId)->first();
         
             $total_sales = $sales->amount ?? 0;
         
             // Fetch outstanding transactions
-            $outstanding = Transaction::whereBetween(DB::raw('created_at'), [$start_date, $end_date])
-                ->where('user_id', $user)
-                ->where('status', 'pending')
-                ->with('sales', 'split')
-                ->get();
+            $outstanding = applyShopFilter(Transaction::whereBetween(DB::raw('created_at'), [$start_date, $end_date])
+                                ->where('user_id', $user)
+                                ->where('status', 'pending')
+                                ->with('sales', 'split'), $shopId
+                                )->get();
         
             // Summarize the data
             $summary = [
@@ -176,6 +176,7 @@ class ReportController extends Controller
     public function generate_user_report(Request $request, $id){
             $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
             $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;    
+            $shopId = $request->query('shop_id');
 
             $validated = Validator::make($request->all(), [
                 'start_date' => 'required',
@@ -184,71 +185,67 @@ class ReportController extends Controller
     
             if ($validated) {
                 // get transactions between 6am the previous day - 4am today
-                $transactions = Transaction::whereBetween('created_at', [$start_date, $end_date])
-                ->with('split')->with("user")->with('sales')->where('user_id', $id)->sum("amount");
+                $transactions = applyShopFilter(Transaction::whereBetween('created_at', [$start_date, $end_date])
+                                ->with('split')->with("user")->with('sales')->where('user_id', $id), $shopId)
+                                ->sum("amount");
                 
-                $sales = Sales::select(DB::raw('sum(price * qty) as  amount'))
+                $sales = applyShopFilter(Sales::select(DB::raw('sum(price * qty) as  amount'))
                             ->whereBetween('created_at', [$start_date, $end_date])
-                            ->where('user_id', $id)->get();
+                            ->where('user_id', $id), $shopId)->get();
                 $sales = $sales[0]['amount'];
     
                 //get transactions paid with cash
-                $cash =  Transaction::whereBetween('created_at', [$start_date, $end_date])
-                            ->where("payment_method", "cash")->where('user_id', $id)
-                            ->sum("amount");
+                $cash =  applyShopFilter(Transaction::whereBetween('created_at', [$start_date, $end_date])
+                            ->where("payment_method", "cash")->where('user_id', $id), $shopId)->sum("amount");
     
                 //get transactions paid with card
-                $card =  Transaction::whereBetween('created_at', [$start_date, $end_date])
-                        ->where("payment_method", "card")->where('user_id', $id)
-                        ->sum("amount");
+                $card =  applyShopFilter(Transaction::whereBetween('created_at', [$start_date, $end_date])
+                        ->where("payment_method", "card")->where('user_id', $id), $shopId)->sum("amount");
     
                 //get transactions paid with transfer
-                $transfer =  Transaction::whereBetween('created_at', [$start_date, $end_date])
-                            ->where("payment_method", "transfer")->where('user_id', $id)
-                            ->sum("amount");
+                $transfer =  applyShopFilter(Transaction::whereBetween('created_at', [$start_date, $end_date])
+                            ->where("payment_method", "transfer")->where('user_id', $id), $shopId
+                            )->sum("amount");
     
                  //get transactions paid with split
-                 $split =  Transaction::whereBetween('created_at', [$start_date, $end_date])
-                            ->where("payment_method", "split")->where('user_id', $id)
-                            ->sum("amount");
+                 $split =  applyShopFilter(Transaction::whereBetween('created_at', [$start_date, $end_date])
+                            ->where("payment_method", "split")->where('user_id', $id), $shopId
+                            )->sum("amount");
     
-                $split_payment_card = SplitPayments::whereHas('transaction', function ($query) use ($id) {
+                $split_payment_card = applyShopFilter(SplitPayments::whereHas('transaction', function ($query) use ($id) {
                                 $query->where('user_id', $id);
                             })
                             ->whereBetween('created_at', [$start_date, $end_date])
-                            ->where("payment_method", "card")
-                            ->sum("amount");
+                            ->where("payment_method", "card"), $shopId
+                            )->sum("amount");
                             
     
-                 $split_payment_cash = SplitPayments::whereHas('transaction', function ($query) use ($id) {
-                                $query->where('user_id', $id);
-                            })
-                            ->whereBetween('created_at', [$start_date, $end_date])
-                                        ->where("payment_method", "cash")
+                 $split_payment_cash = applyShopFilter(SplitPayments::whereHas('transaction', function ($query) use ($id) {
+                                            $query->where('user_id', $id);
+                                        })->whereBetween('created_at', [$start_date, $end_date])
+                                        ->where("payment_method", "cash"), $shopId)
                                         ->sum("amount");
     
-                 $split_payment_transfer = SplitPayments::whereHas('transaction', function ($query) use ($id) {
-                                $query->where('user_id', $id);
-                            })
-                            ->whereBetween('created_at', [$start_date, $end_date])
-                                            ->where("payment_method", "transfer")
+                 $split_payment_transfer = applyShopFilter(SplitPayments::whereHas('transaction', function ($query) use ($id) {
+                                                $query->where('user_id', $id);
+                                            })->whereBetween('created_at', [$start_date, $end_date])
+                                            ->where("payment_method", "transfer"), $shopId)
                                             ->sum("amount");
                 
                  //bank payment received
                  $banks = Banks::get();
                  $bank_sales = array();
                  foreach ($banks as $bank) {
-                    $card__banktoday =  Transaction::whereBetween('created_at', [$start_date, $end_date])
+                    $card__banktoday =  applyShopFilter(Transaction::whereBetween('created_at', [$start_date, $end_date])
                                         ->where("payment_method", "card")
-                                        ->where('bank_id', $bank['id'])->where('user_id', $id)
+                                        ->where('bank_id', $bank['id'])->where('user_id', $id), $shopId)
                                         ->sum("amount");
     
-                    $split_payment_bank_card_today = SplitPayments::whereHas('transaction', function ($query) use ($id) {
-                                $query->where('user_id', $id);
-                            })
-                            ->whereBetween('created_at', [$start_date, $end_date])
+                    $split_payment_bank_card_today = applyShopFilter(SplitPayments::whereHas('transaction', function ($query) use ($id) {
+                                                            $query->where('user_id', $id);
+                                                        })->whereBetween('created_at', [$start_date, $end_date])
                                                         ->where("payment_method", "card")
-                                                        ->where('bank_id', $bank['id'])
+                                                        ->where('bank_id', $bank['id']), $shopId)
                                                         ->sum("amount");
                     
                     array_push($bank_sales, [
@@ -257,32 +254,32 @@ class ReportController extends Controller
                     ]);
                  }
                  // get comlementary
-                $complementary = Transaction::whereBetween('created_at', [$start_date, $end_date])
-                                    ->where("payment_method", "complementary")->where('user_id', $id)
+                $complementary = applyShopFilter(Transaction::whereBetween('created_at', [$start_date, $end_date])
+                                    ->where("payment_method", "complementary")->where('user_id', $id), $shopId)
                                     ->sum("amount");
     
                 
-                $oustanding = Transaction::with(["sales" => function($q){
+                $oustanding = applyShopFilter(Transaction::with(["sales" => function($q){
+                            $q->with('product');
+                        }])->with("split")->whereBetween('created_at', [$start_date, $end_date])
+                        ->with(['user' => function ($q) {
+                            $q->withTrashed();
+                        }])->where("status", "pending")->where('user_id', $id), $shopId)->get();
+    
+                $sold_items = applyShopFilter(Transaction::with(["sales" => function($q){
                     $q->with('product');
                 }])->with("split")->whereBetween('created_at', [$start_date, $end_date])
                 ->with(['user' => function ($q) {
                     $q->withTrashed();
-                }])->where("status", "pending")->where('user_id', $id)->get();
-    
-                $sold_items = Transaction::with(["sales" => function($q){
-                    $q->with('product');
-                }])->with("split")->whereBetween('created_at', [$start_date, $end_date])
-                ->with(['user' => function ($q) {
-                    $q->withTrashed();
-                }])->where("status", "completed")->where('user_id', $id)->get();
+                }])->where("status", "completed")->where('user_id', $id), $shopId)->get();
     
     
-                $void_items = Transaction::with(["sales" => function($q){
+                $void_items = applyShopFilter(Transaction::with(["sales" => function($q){
                     $q->with('product')->withTrashed();
                 }])->whereBetween('created_at', [$start_date, $end_date])
                 ->with(['user' => function ($q) {
                     $q->withTrashed();
-                }])->where("status", "cancelled")->where('user_id', $id)->withTrashed()->get();
+                }])->where("status", "cancelled")->where('user_id', $id)->withTrashed(), $shopId)->get();
     
                 $summary = [
                     "expected_amount" => $sales == null ? 0 : $sales,//$this->getVat(),
@@ -315,56 +312,58 @@ class ReportController extends Controller
             'end_date' => 'required',
         ]);
 
+        $shopId = request()->query('shop_id');
+
         if ($validated) {
             // get transactions between 6am the previous day - 4am today
-            $transactions = Transaction::whereBetween('created_at', [$start_date, $end_date])
-            ->with('split')->with("user")->with('sales')->sum("amount");
+            $transactions = applyShopFilter(Transaction::whereBetween('created_at', [$start_date, $end_date])
+            ->with('split')->with("user")->with('sales'), $shopId)->sum("amount");
             
-            $sales = Sales::select(DB::raw('sum(price * qty) as  amount'))->whereBetween('created_at', [$start_date, $end_date])->get();
+            $sales = applyShopFilter(Sales::select(DB::raw('sum(price * qty) as  amount'))->whereBetween('created_at', [$start_date, $end_date]), $shopId)->get();
             $sales = $sales[0]['amount'];
 
             //get transactions paid with cash
-            $cash =  Transaction::whereBetween('created_at', [$start_date, $end_date])->where("payment_method", "cash")->sum("amount");
+            $cash =  applyShopFilter(Transaction::whereBetween('created_at', [$start_date, $end_date])->where("payment_method", "cash"), $shopId)->sum("amount");
 
             //get transactions paid with card
-            $card =  Transaction::whereBetween('created_at', [$start_date, $end_date])
-                    ->where("payment_method", "card")
+            $card =  applyShopFilter(Transaction::whereBetween('created_at', [$start_date, $end_date])
+                    ->where("payment_method", "card"), $shopId)
                     ->sum("amount");
 
             //get transactions paid with transfer
-            $transfer =  Transaction::whereBetween('created_at', [$start_date, $end_date])
-                        ->where("payment_method", "transfer")
+            $transfer =  applyShopFilter(Transaction::whereBetween('created_at', [$start_date, $end_date])
+                        ->where("payment_method", "transfer"), $shopId)
                         ->sum("amount");
 
              //get transactions paid with split
-             $split =  Transaction::whereBetween('created_at', [$start_date, $end_date])
-                        ->where("payment_method", "split")
+             $split =  applyShopFilter(Transaction::whereBetween('created_at', [$start_date, $end_date])
+                        ->where("payment_method", "split"), $shopId)
                         ->sum("amount");
 
-             $split_payment_card = SplitPayments::whereBetween('created_at', [$start_date, $end_date])
-                                    ->where("payment_method", "card")
+             $split_payment_card = applyShopFilter(SplitPayments::whereBetween('created_at', [$start_date, $end_date])
+                                    ->where("payment_method", "card"), $shopId)
                                     ->sum("amount");
 
-             $split_payment_cash = SplitPayments::whereBetween('created_at', [$start_date, $end_date])
-                                    ->where("payment_method", "cash")
+             $split_payment_cash = applyShopFilter(SplitPayments::whereBetween('created_at', [$start_date, $end_date])
+                                    ->where("payment_method", "cash"), $shopId)
                                     ->sum("amount");
 
-             $split_payment_transfer = SplitPayments::whereBetween('created_at', [$start_date, $end_date])
-                                        ->where("payment_method", "transfer")
+             $split_payment_transfer = applyShopFilter(SplitPayments::whereBetween('created_at', [$start_date, $end_date])
+                                        ->where("payment_method", "transfer"), $shopId)
                                         ->sum("amount");
             
              //bank payment received
              $banks = Banks::get();
              $bank_sales = array();
              foreach ($banks as $bank) {
-                $card__banktoday =  Transaction::whereBetween('created_at', [$start_date, $end_date])
+                $card__banktoday =  applyShopFilter(Transaction::whereBetween('created_at', [$start_date, $end_date])
                                     ->where("payment_method", "card")
-                                    ->where('bank_id', $bank['id'])
+                                    ->where('bank_id', $bank['id']), $shopId)
                                     ->sum("amount");
 
-                $split_payment_bank_card_today = SplitPayments::whereBetween('created_at', [$start_date, $end_date])
+                $split_payment_bank_card_today = applyShopFilter(SplitPayments::whereBetween('created_at', [$start_date, $end_date])
                                                     ->where("payment_method", "card")
-                                                    ->where('bank_id', $bank['id'])
+                                                    ->where('bank_id', $bank['id']), $shopId)
                                                     ->sum("amount");
                 
                 array_push($bank_sales, [
@@ -373,32 +372,32 @@ class ReportController extends Controller
                 ]);
              }
              // get comlementary
-            $complementary = Transaction::whereBetween('created_at', [$start_date, $end_date])
-                                ->where("payment_method", "complementary")
+            $complementary = applyShopFilter(Transaction::whereBetween('created_at', [$start_date, $end_date])
+                                ->where("payment_method", "complementary"), $shopId)
                                 ->sum("amount");
 
             
-            $oustanding = Transaction::with(["sales" => function($q){
+            $oustanding = applyShopFilter(Transaction::with(["sales" => function($q){
                 $q->with('product');
             }])->with("split")->whereBetween('created_at', [$start_date, $end_date])
             ->with(['user' => function ($q) {
                 $q->withTrashed();
-            }])->where("status", "pending")->get();
+            }])->where("status", "pending"), $shopId)->get();
 
-            $sold_items = Transaction::with(["sales" => function($q){
+            $sold_items = applyShopFilter(Transaction::with(["sales" => function($q){
                 $q->with('product');
             }])->with("split")->whereBetween('created_at', [$start_date, $end_date])
             ->with(['user' => function ($q) {
                 $q->withTrashed();
-            }])->where("status", "completed")->get();
+            }])->where("status", "completed"), $shopId)->get();
 
 
-            $void_items = Transaction::with(["sales" => function($q){
+            $void_items = applyShopFilter(Transaction::with(["sales" => function($q){
                 $q->with('product')->withTrashed();
             }])->whereBetween('created_at', [$start_date, $end_date])
             ->with(['user' => function ($q) {
                 $q->withTrashed();
-            }])->where("status", "cancelled")->withTrashed()->get();
+            }])->where("status", "cancelled")->withTrashed(), $shopId)->get();
 
             $summary = [
                 "expected_amount" => $sales == null ? 0 : $sales,//$this->getVat(),
@@ -431,7 +430,8 @@ class ReportController extends Controller
     public function getSalesPerformance(Request $request){
         $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
         $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
-        $sales = Transaction::select(
+        $shopId = request()->query('shop_id');
+        $sales = applyShopFilter(Transaction::select(
                     DB::raw('DATE(created_at) as sale_date'), // Extract the date portion
                     DB::raw('SUM(amount) as total_amount')   // Sum the amount per day
                 )
@@ -440,7 +440,7 @@ class ReportController extends Controller
                 ->where('status', 'completed')
                 ->groupBy('sale_date') // Group by the extracted date
                 ->orderBy('sale_date') // Optionally order by the date
-                ->get();
+                , $shopId)->get();
 
         return res_success('success', $sales);
     }
@@ -452,25 +452,27 @@ class ReportController extends Controller
             'start_date' => 'required',
             'end_date' => 'required'
         ]);
+        $shopId = request()->query('shop_id');    
 
         if($validated){
-            $report = Expenditure::select(DB::raw('date(created_at) as request_date'), 
-                DB::raw('SUM(amount) as total_amount')   // Sum the amount per day
-            )->whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date])
-            ->whereHas('type', function ($query) {
-                $query->where('expenditure_type', 'opex'); // Assuming 'name' is a column in the expenditure_type table
-        })
+            $report =       applyShopFilter(Expenditure::select(DB::raw('date(created_at) as request_date'), 
+                                        DB::raw('SUM(amount) as total_amount')   // Sum the amount per day
+                                    )->whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date])
+                                    ->whereHas('type', function ($query) {
+                                        $query->where('expenditure_type', 'opex'); // Assuming 'name' is a column in the expenditure_type table
+                                })
                                 ->with('type')->with('user')
                                 ->groupBy('request_date') // Group by the extracted date
-                                ->orderBy('request_date') // 
+                                ->orderBy('request_date'), $shopId) // 
                                 ->get();
             return res_success('expenditures', $report);
         }
     }
 
     public function getCustomerInsightPerformance(Request $request){
-            $report = Customer::select(DB::raw('fullname') , DB::raw('ABS(wallet_balance) as wallet_balance'))
-                        ->where('wallet_balance', "<", 0);
+        $shopId = request()->query('shop_id');
+            $report = applyShopFilter(Customer::select(DB::raw('fullname') , DB::raw('ABS(wallet_balance) as wallet_balance'))
+                        ->where('wallet_balance', "<", 0), $shopId);
             
             return res_success('expenditures', [$report->get(), $report->sum('wallet_balance')]);
     }
@@ -483,20 +485,22 @@ class ReportController extends Controller
             'end_date' => 'required'
         ]);
 
+        $shopId = request()->query('shop_id');  
+
         if($validated){
         // Fetching reports
-        $report = Purchase::select(
+        $report = applyShopFilter( Purchase::select(
                 DB::raw('DATE(created_at) as purchase_date'),
                 DB::raw('SUM(price) as total_amount'),
                 DB::raw('SUM(added_costs) as other_cogs')
             )
             ->whereBetween('created_at', [$start_date, $end_date])
             ->groupBy('purchase_date')
-            ->orderBy('purchase_date')
+            ->orderBy('purchase_date'), $shopId)
             ->get();
 
         // Fetching expenditures
-        $cogs_exp = Expenditure::select(
+        $cogs_exp = applyShopFilter(Expenditure::select(
                 DB::raw('DATE(created_at) as purchase_date'),
                 DB::raw('SUM(amount) as total_amount')
             )
@@ -505,7 +509,7 @@ class ReportController extends Controller
                 $query->where('expenditure_type', 'cogs');
             })
             ->groupBy('purchase_date')
-            ->orderBy('purchase_date')
+            ->orderBy('purchase_date'), $shopId)
             ->get();
 
         // Merge both collections
@@ -530,15 +534,16 @@ class ReportController extends Controller
     }
 
     public function getPaymentMethodPerformance(Request $request){
+        $shopId = request()->query('shop_id');
         $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
         $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
         $methods = ['cash', 'transfer', 'card', 'wallet', 'on_credit', 'pos', 'split', "complementary"];
         $payment_method_distr = [];
         foreach ($methods as $key => $method) {
-            $sales = Transaction::where('type', 'sold')
+            $sales = applyShopFilter(Transaction::where('type', 'sold')
                         ->whereBetween('created_at', [$start_date, $end_date])
                         ->where('status', 'completed')
-                        ->where('payment_method', $method)
+                        ->where('payment_method', $method), $shopId)
                         ->sum('amount');
 
                         $payment_method_distr[$method][] =  $sales;
@@ -550,6 +555,7 @@ class ReportController extends Controller
     }
 
     public function getProfitLoss(Request $request){
+        $shopId = request()->query('shop_id');
         // const turnover = computed(() => {
         //     const data = monthlyData[selectedMonth.value];
       
@@ -573,22 +579,21 @@ class ReportController extends Controller
             'start_date' => 'required',
             'end_date' => 'required'
         ]);
-        $sales = Transaction::where('type', 'sold')
+        $sales = applyShopFilter(Transaction::where('type', 'sold')
                     ->whereBetween('created_at', [$start_date, $end_date])
-                    ->where('status', 'completed')
-                    ->sum('amount');
+                    ->where('status', 'completed'), $shopId
+                    )->sum('amount');
 
         $turnover = $sales;
         
-        $cogs = Purchase::whereBetween('created_at', [$start_date, $end_date])
-                ->sum(DB::raw('price + added_costs'));
+        $cogs = applyShopFilter(Purchase::whereBetween('created_at', [$start_date, $end_date]), $shopId)->sum(DB::raw('price + added_costs'));
 
-        $opex = Expenditure::whereBetween('created_at', [$start_date, $end_date])->whereHas('type', function ($query) {
+        $opex = applyShopFilter(Expenditure::whereBetween('created_at', [$start_date, $end_date])->whereHas('type', function ($query) {
                     $query->where('expenditure_type', 'opex'); // Assuming 'name' is a column in the expenditure_type table
-                })->sum('amount');
+                }), $shopId)->sum('amount');
         
-        $assets = Expenditure::with('type')->whereHas('type', function ($query) {
-            $query->where('expenditure_type', 'capex');})->get();
+        $assets = applyShopFilter(Expenditure::with('type')->whereHas('type', function ($query) {
+            $query->where('expenditure_type', 'capex');}), $shopId)->get();
 
         $annual_depreciation = 0;
         $monthly_depreciation = 0;
@@ -614,10 +619,10 @@ class ReportController extends Controller
 
         }
 
-        $cogs_exp = Expenditure::whereBetween('created_at', [$start_date, $end_date])
+        $cogs_exp = applyShopFilter(Expenditure::whereBetween('created_at', [$start_date, $end_date])
                                     ->whereHas('type', function ($query) {
                                             $query->where('expenditure_type', 'cogs'); // Assuming 'name' is a column in the expenditure_type table
-                                    })->sum('amount');
+                                    }), $shopId)->sum('amount');
         
         $gross_profit = $turnover - ($cogs + $cogs_exp);
 
@@ -647,29 +652,29 @@ class ReportController extends Controller
 
     public function getAccountingBalance($start_date, $end_date)
     {
-    
+        $shopId = request()->query('shop_id');
         // Opening Cash Balance (sold transactions before start_date)
-        $opening_cash = Transaction::where('type', 'sold')
+        $opening_cash = applyShopFilter(Transaction::where('type', 'sold')
             ->where('created_at', '<', $start_date)
-            ->where('status', 'completed')
+            ->where('status', 'completed'), $shopId)
             ->sum('amount');
     
         // Opening Receivables Balance (on_credit transactions before start_date)
-        $opening_receivables = Transaction::where('type', 'on_credit')
+        $opening_receivables = applyShopFilter(Transaction::where('type', 'on_credit')
             ->where('created_at', '<', $start_date)
-            ->where('status', 'completed')
+            ->where('status', 'completed'), $shopId)
             ->sum('amount');
     
         // Total Cash (sold transactions within period)
-        $cash_within_period = Transaction::where('type', 'sold')
+        $cash_within_period = applyShopFilter(Transaction::where('type', 'sold')
             ->whereBetween('created_at', [$start_date, $end_date])
-            ->where('status', 'completed')
+            ->where('status', 'completed'), $shopId)
             ->sum('amount');
     
         // Total Receivables (on_credit transactions within period)
-        $receivables_within_period = Transaction::where('type', 'on_credit')
+        $receivables_within_period = applyShopFilter(Transaction::where('type', 'on_credit')
             ->whereBetween('created_at', [$start_date, $end_date])
-            ->where('status', 'completed')
+            ->where('status', 'completed'), $shopId)
             ->sum('amount');
     
         // Calculate Closing Balances
@@ -683,7 +688,4 @@ class ReportController extends Controller
             "closing_receivables_balance" => $closing_receivables
         ];
     }
-    
-
-
 }

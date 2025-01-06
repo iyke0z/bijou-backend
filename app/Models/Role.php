@@ -6,12 +6,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Roles extends Model
+class Role extends Model
 {
     use HasFactory, SoftDeletes;
     protected $guarded = ['id'];
 
     public function priviledges(){
-        return $this->hasMany(RolePriviledges::class);
+        return $this->hasMany(RolePriviledge::class);
     }
 }

@@ -24,22 +24,27 @@ class TransactionRepository implements TransactionRepositoryInterface{
     use ProductTrait, RefCode, CustomerTrait, BusinessTrait, CheckoutTrait;
 
     public function drinks_prep_status(){
-        $drinks = Sales::with(['product' => function($q){
+        $shopId = request()->query('shop_id');
+        $drinks = applyShopFilter(Sales::with(['product' => function($q){
             $q->where('category_id',"!=", 1)->where('category_id', "!=", 2);
         }])->with(['transaction' => function($q) {
             $q->where('status', "!=", "cancelled");
-        }])->with('user')->where('prep_status', "not_ready")->OrWhere('prep_status', "almost_ready")->latest()->get();
+        }])->with('user')->where('prep_status', "not_ready")->OrWhere('prep_status', "almost_ready")->latest(), $shopId)
+        ->get();
 
         return res_success('drinks', $drinks);
 
     }
 
     public function food_prep_status(){
-        $food = Sales::with(['product' => function($q){
-            $q->where('category_id', 1);
-        }])->with(['transaction' => function($q) {
-            $q->where('status', "!=", "cancelled");
-        }])->with('user')->where('prep_status', "not_ready")->OrWhere('prep_status', "almost_ready")->latest()->get();
+        $shopId = request()->query('shop_id');
+
+        $food = applyShopFilter(Sales::with(['product' => function($q){
+                    $q->where('category_id', 1);
+                }])->with(['transaction' => function($q) {
+                    $q->where('status', "!=", "cancelled");
+                }])->with('user')->where('prep_status', "not_ready")->OrWhere('prep_status', "almost_ready")->latest(), $shopId)
+                ->get();
         return res_success('food', $food);
     }
     public function update_prep_status($request){
@@ -56,8 +61,8 @@ class TransactionRepository implements TransactionRepositoryInterface{
     }
     public function sell($request){
         $auth = WaiterCode::where('code', $request["auth_code"])->first();
-
-        if($auth->exists()){
+        $shopId = request()->query('shop_id');
+        if($auth->exists()){    
             // create new transaction
             $transaction = new Transaction();
             $transaction->platform = 'online';
@@ -68,11 +73,12 @@ class TransactionRepository implements TransactionRepositoryInterface{
             $request['is_order'] == false ? $transaction->payment_method = $request['payment_method'] : null;
             $transaction->table_description = $request['description'];
             $transaction->customer_id = $request['customer_id'] ?? $request['customer_id'];
+            $transaction->shop_id = $shopId;
             $transaction->save();
             // create new sales order
 
             for ($i=0; $i < count($request['products']) ; $i++) {
-                $product = Product::with('category')->where('id',$request['products'][$i]["product_id"])->first();
+                $product = applyShopFilter(Product::with('category')->where('id',$request['products'][$i]["product_id"]),$shopId)->first();
                 if($product->category->has_stock == 1){
                     $product->stock = $product->stock - $request['products'][$i]["qty"];
                     $product->save();
@@ -84,6 +90,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
                 $sale->price = $request['products'][$i]["price"];
                 $sale->qty = $request['products'][$i]["qty"];
                 $sale->user_id = $auth->user_id;
+                $sale->shop_id = $shopId;
                 $sale->save();
             }
 
@@ -147,6 +154,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
     }
     public function pay($request){
         $auth = WaiterCode::where('code', $request["auth_code"])->first();
+        $shopId = request()->query('shop_id');
 
         if($auth->exists()){
             // update transaction
@@ -167,6 +175,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
                     $split_payment->payment_method = $split["split_playment_method"];
                     $split_payment->amount = $split["split_payment_amount"];
                     $split_payment->bank_id = $split["bank_id"];
+                    $split_payment->shop_id = $shopId;
                     $split_payment->save();
                 }
             }
@@ -214,13 +223,16 @@ class TransactionRepository implements TransactionRepositoryInterface{
 
     public function create_discount($request) {
         /* this function craetes a discount code */
-        $check = Discount::where('code', $request['code'])->first();
+        $shopId = request()->query('shop_id');
+
+        $check = applyShopFilter(Discount::where('code', $request['code']), $shopId)->first();
         if(!$check){
             Discount::create([
             "code"=> $request["code"],
             "percentage" => $request["percentage"],
             "count" => $request["count"],
             "expiry_date" => $request["expiry_date"],
+            "shop_id" => $shopId
         ]);
             return res_completed('Discount Code Created');
         }else{
@@ -231,6 +243,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
 
     public function update_discount($request, $id){
         /* this function updates  discount code */
+
         $discount = Discount::find($id);
         if($discount->exists()){
             // update

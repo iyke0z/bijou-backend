@@ -34,7 +34,9 @@ class UpdateUserRequest extends FormRequest
             "password" => 'nullable',
             'dob'=>'required',
             'picture'=>'sometimes',
-            'gender'=>'required'
+            'gender'=>'required',
+            'shop_id'=>'required',
+
         ];
     }
     protected function failedValidation(Validator $validator)

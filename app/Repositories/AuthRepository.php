@@ -6,6 +6,7 @@ use App\Interfaces\AuthRepositoryInterface;
 use App\Models\BusinessDetails;
 use App\Models\BusinessTime;
 use App\Models\LoginLog;
+use App\Models\Shop;
 use App\Models\User;
 use App\Models\WaiterCode;
 use Carbon\Carbon;
@@ -15,7 +16,7 @@ use Illuminate\Support\Str;
 
 class AuthRepository implements AuthRepositoryInterface{
     public function login($request){
-        $user = User::where('phone', $request['phone'])->first();
+        $user = User::with('shop_access')->with('shop')->where('phone', $request['phone'])->first();
         if(! $user || ! Hash::check($request['password'], $user->password)){
             return res_completed('The provided credentials are incorrect');
         }else{
@@ -29,6 +30,7 @@ class AuthRepository implements AuthRepositoryInterface{
                 'user' => User::with('role')->where('id', $user->id)->first(),
                 'access_token' => $token,
                 'token_type' => 'Bearer',
+                'shop' => Shop::where('id', $user->shop_id)->first()
             ]);
         }
     }
@@ -49,7 +51,6 @@ class AuthRepository implements AuthRepositoryInterface{
         // upload image
         $logo = null;
         if(!is_null($request['logo'])){
-
             $logo = Str::slug($request['name'], '-').time().'.'.$request['logo']->extension();
             $request['logo']->move(public_path('images/logo'), $logo);
         }
@@ -64,6 +65,15 @@ class AuthRepository implements AuthRepositoryInterface{
             "vat" => $request["vat"],
             "status"=>$request["status"],
             "expiry_date" => Carbon::now()->addMonths(2)->timestamp
+        ]);
+
+        // create shop
+        Shop::create([
+            "title" => "Default shop",
+            "address" => "default address",
+            "status" => "active",
+            "contact_person" => "Default User",
+            "phone_number" => $request["phone_one"]
         ]);
         return res_completed('created');
     }
@@ -92,6 +102,7 @@ class AuthRepository implements AuthRepositoryInterface{
             $businesstime->update([
                 'opening_time' => $request['opening_time'],
                 'closing_time' => $request['closing_time'],
+                'shop_id' => $request->query('shop_id')
             ]);
         }
 

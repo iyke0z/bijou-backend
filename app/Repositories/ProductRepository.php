@@ -81,6 +81,7 @@ class ProductRepository implements ProductRepositoryInterface{
 
     public function update_product($request, $id){
         $product = Product::find($id);
+        $shopId = request()->query('shop_id');
         if($product->exists()){
             // checkifCodeExists
             $product_code = Product::where('code', $request['code'])
@@ -96,7 +97,7 @@ class ProductRepository implements ProductRepositoryInterface{
                         'code' => $request['code']
                     ]);
                     $user = Auth::user()->id;
-                    ProductTrait::log_product($id, 'update', $request['stock'], $request['price'], $user);
+                    ProductTrait::log_product($id, 'update', $request['stock'], $request['price'], $user, $shopId);
                 return res_success('product updated', $product);
             // }else{
             //     return res_bad_request('code exists');
@@ -114,7 +115,9 @@ class ProductRepository implements ProductRepositoryInterface{
     public function generate_product_report($request, $id){
         $start_date = $request['start_date'];
         $end_date = $request['end_date'];
-        $report = Product::with('category')->with(
+        $shopId = request()->query('shop_id');
+
+        $report = applyShopFilter(Product::with('category')->with(
             ['sales' => function($q) use ($start_date, $end_date){
                 $q->select('sales.*','users.fullname')
                 ->join('users', 'sales.user_id', 'users.id')
@@ -127,7 +130,7 @@ class ProductRepository implements ProductRepositoryInterface{
                         ->join('users', 'purchases.user_id', 'users.id')
                         ->whereBetween('purchase_details.created_at', [$start_date, $end_date]);
                 }]
-            )->with('images')->find($id);
+            )->with('images'), $shopId)->find($id);
         return res_success('report', $report);
     }
 
@@ -137,23 +140,25 @@ class ProductRepository implements ProductRepositoryInterface{
         $new_order->user_id = Auth::user()->id;
         $new_order->save();
         $user = Auth::user()->id;
+        $shopId = request()->query('shop_id');
+
 
         for ($i=0; $i < count($request['purchase']); $i++) {
-            $previous_stock = Product::where('id', $request['purchase'][$i]["product_id"])->first();
-            $purchase = PurchaseDetails::create([
+            $previous_stock = applyShopFilter(Product::where('id', $request['purchase'][$i]["product_id"]), $shopId)->first();
+            $purchase = applyShopFilter(PurchaseDetails::create([
                 "purchase_id" => $new_order->id,
                 "product_id" => $request['purchase'][$i]["product_id"],
                 "previous_stock" => $previous_stock['stock'],
                 "qty"=>$request['purchase'][$i]['qty'],
                 "cost"=>$request['purchase'][$i]['cost']
-            ]);
-            ProductTrait::log_purchase($purchase->id, 'purchase', $request['purchase'][$i]['qty'], $request['purchase'][$i]['cost'], $user);
+            ]), $shopId);
+            ProductTrait::log_purchase($purchase->id, 'purchase', $request['purchase'][$i]['qty'], $request['purchase'][$i]['cost'], $user, $shopId);
             array_push($totalPrice, $request['purchase'][$i]['qty']*$request['purchase'][$i]['cost']);
             $purchase;
             // update product table
             $product = Product::find($request['purchase'][$i]["product_id"]);
             if($product->exists()){
-                ProductTrait::log_product($product->id, 'purchase', $request['purchase'][$i]['qty'], $request['purchase'][$i]['cost'], $user);
+                ProductTrait::log_product($product->id, 'purchase', $request['purchase'][$i]['qty'], $request['purchase'][$i]['cost'], $user, $shopId);
                 $product->stock = $product->stock + $request['purchase'][$i]['qty'];
                 // $product->price = $product->price + $request['purchase'][$i]['cost'];
                 $product->out_of_stock = 0;
@@ -175,6 +180,7 @@ class ProductRepository implements ProductRepositoryInterface{
     public function update_purchase($request, $id){
         $totalPrice = [];
         $user = Auth::user()->id;
+        $shopId = $request->query('param');
         $products = [ ];
         for ($i=0; $i < count($request['purchase']); $i++) {
             // foreach of the object update if id exists and create new if not exists
@@ -189,7 +195,7 @@ class ProductRepository implements ProductRepositoryInterface{
                     $product->save();
                 }
                 // log this purchase
-                ProductTrait::log_purchase($single_purchase->id, 'update', $request['purchase'][$i]['qty'], $request['purchase'][$i]['cost'], $user);
+                ProductTrait::log_purchase($single_purchase->id, 'update', $request['purchase'][$i]['qty'], $request['purchase'][$i]['cost'], $user, $shopId);
                 //update purchase details with new information
                 $detail = PurchaseDetails::find($single_purchase->id);
                 $single_purchase->update([
@@ -204,7 +210,7 @@ class ProductRepository implements ProductRepositoryInterface{
                 $product = Product::find($request['purchase'][$i]["product_id"]);
                 if($product->exists()){
                     // log product
-                    ProductTrait::log_product($product->id, 'purchase_update', $request['purchase'][$i]['qty'], $request['purchase'][$i]['cost'], $user);
+                    ProductTrait::log_product($product->id, 'purchase_update', $request['purchase'][$i]['qty'], $request['purchase'][$i]['cost'], $user, $shopId);
                     $product->stock = $product->stock  + $request['purchase'][$i]['qty'];
                     // $product->price = $product->price + $request['purchase'][$i]['cost'];
                     $product->out_of_stock = 0;
@@ -222,7 +228,8 @@ class ProductRepository implements ProductRepositoryInterface{
                     "purchase_id" => $request['new_purchase'][$i]['purchase_id'],
                     "product_id" => $request['new_purchase'][$i]["product_id"],
                     "qty"=>$request['new_purchase'][$i]['qty'],
-                    "cost"=>$request['new_purchase'][$i]['cost']
+                    "cost"=>$request['new_purchase'][$i]['cost'],
+                    'shop_id' => $shopId
                 ]);
                 // update product table
                 $product = Product::find($request['new_purchase'][$i]["product_id"]);

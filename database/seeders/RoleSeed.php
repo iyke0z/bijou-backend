@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\Roles;
+use App\Models\Role;
 use Illuminate\Database\Seeder;
 
 class RoleSeed extends Seeder
@@ -20,7 +20,7 @@ class RoleSeed extends Seeder
             $name = [
                 "name" => $dat[$i]
             ];
-            Roles::create($name);
+            Role::create($name);
         }
 
 

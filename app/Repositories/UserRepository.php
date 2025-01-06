@@ -3,10 +3,12 @@
 namespace App\Repositories;
 
 use App\Interfaces\UserRepositoryInterface;
-use App\Models\Priviledges;
+use App\Models\Priviledge;
 use App\Models\RolePriviledges;
-use App\Models\Roles;
+use App\Models\Role;
+use App\Models\RolePriviledge;
 use App\Models\User;
+use App\Models\UserPriviledge;
 use App\Models\UserPriviledges;
 use App\Traits\AuthTrait;
 use Illuminate\Support\Facades\Hash;
@@ -21,6 +23,7 @@ class UserRepository implements UserRepositoryInterface{
             $picture = Str::slug($request['fullname'], '-').time().'.'.$request['picture']->extension();
             $request['picture']->move(public_path('images/users'), $picture);
         }
+
         $data = [
             "fullname"  => $request['fullname'],
             "email" => $request['email'],
@@ -30,7 +33,8 @@ class UserRepository implements UserRepositoryInterface{
             "password"=>Hash::make($request['password']),
             'dob'=>$request['dob'],
             'picture'=>$picture,
-            'gender'=>$request['gender']
+            'gender'=>$request['gender'],
+            'shop_id'=>$request['shop_id'],
         ];
 
         $user = User::create($data);
@@ -59,7 +63,9 @@ class UserRepository implements UserRepositoryInterface{
                 "password"=>Hash::make($request['password']),
                 'dob'=>$request['dob'],
                 'picture'=>!is_string($request['picture']) ? $picture: $request['picture'],
-                'gender'=>$request['gender']
+                'gender'=>$request['gender'],
+            'shop_id'=>$request['shop_id'],
+
             ];
             $user->update($data);
             return res_completed('account updated successfully');
@@ -68,28 +74,42 @@ class UserRepository implements UserRepositoryInterface{
     }
 
     public function assign_user_priviledge($request, $id){
-        $priviledge = $request['priviledges'];
+        $priviledge = $request['Priviledge'];
         if(count($priviledge) > 0){
             for ($i=0; $i < count($priviledge); $i++) {
-                $access = new UserPriviledges;
+                $access = new UserPriviledge;
                 $access->user_id = $id;
                 $access->priviledge_id = $priviledge[$i];
                 $access->save();
             }
         }
-        return res_completed('priviledges assigned successfully');
+        return res_completed('Priviledge assigned successfully');
     }
     public function assign_role_priviledge($request, $id){
-        $priviledge = $request['priviledges'];
+        $priviledge = $request['priviledgesToAdd'];
+        $priviledgeRemove = $request['priviledgesToRemove'];
+        //
         if(count($priviledge) > 0){
             for ($i=0; $i < count($priviledge); $i++) {
-                $access = new RolePriviledges;
-                $access->role_id = $id;
-                $access->priviledge_id = $priviledge[$i];
-                $access->save();
+                if (!RolePriviledge::where('priviledge_id',$priviledge[$i])->where('role_id', $id)->first()) {
+                    $access = new RolePriviledge;
+                    $access->role_id = $id;
+                    $access->priviledge_id = $priviledge[$i];
+                    $access->save();
+                }
             }
         }
-        return res_completed('priviledges assigned successfully');
+
+        if(count($priviledgeRemove) > 0){
+            for ($i=0; $i < count($priviledgeRemove); $i++) {
+                $exists = RolePriviledge::where('priviledge_id',$priviledgeRemove[$i])->where('role_id', $id)->first();
+                if ($exists) {
+                    $exists->delete();
+                }
+
+            }
+        }
+        return res_completed('Priviledge assigned successfully');
     }
 
     public function get_user($id){
@@ -110,24 +130,24 @@ class UserRepository implements UserRepositoryInterface{
 
     public function create_role($request){
         $already_exists = [];
-        for ($i=0; $i < count($request['name']) ; $i++) {
-            $check = Roles::where('name', strtolower($request['name'][$i]))->first();
+        for ($i=0; $i < count($request) ; $i++) {
+            $check = Role::where('name', strtolower($request[$i]))->first();
             if(!$check){
-                $role = Roles::create(['name'=>strtolower($request["name"][$i])]);
+                $role = Role::create(['name'=>strtolower($request[$i])]);
                 $role;
             }else{
-                array_push($already_exists, $request['name'][$i]);
+                array_push($already_exists, $request[$i]);
             }
         }
         if(count($already_exists) > 0){
             return res_success('already exists', $already_exists);
         }
-        return res_completed('Roles Created');
+        return res_completed('Role Created');
     }
 
     public function delete_role($id)
     {
-        $delete = Roles::findOrFail($id)->delete();
+        $delete = Role::findOrFail($id)->delete();
         if($delete){
             return res_completed('deleted');
         }
@@ -137,9 +157,9 @@ class UserRepository implements UserRepositoryInterface{
     public function create_priviledge($request){
         $already_exists = [];
         for ($i=0; $i < count($request['name']) ; $i++) {
-            $check = Priviledges::where('name', strtolower($request['name'][$i]))->first();
+            $check = Priviledge::where('name', strtolower($request['name'][$i]))->first();
             if(!$check){
-                $priviledge = Priviledges::create(['name'=>strtolower($request['name'][$i])]);
+                $priviledge = Priviledge::create(['name'=>strtolower($request['name'][$i])]);
                 $priviledge;
             }else{
                 array_push($already_exists, $request['name'][$i]);
@@ -152,7 +172,7 @@ class UserRepository implements UserRepositoryInterface{
     }
 
     public function delete_priviledge ($id){
-        $delete = Priviledges::findOrFail($id)->delete();
+        $delete = Priviledge::findOrFail($id)->delete();
         if($delete){
             return res_completed('deleted');
         }

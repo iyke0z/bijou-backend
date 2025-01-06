@@ -38,7 +38,7 @@ class User extends Authenticatable
      */
 
      public function role(){
-        return $this->belongsTo(Roles::class, 'role_id');
+        return $this->belongsTo(Role::class, 'role_id');
      }
 
      public function purchase(){
@@ -50,7 +50,7 @@ class User extends Authenticatable
      }
 
      public function user_priviledges(){
-        return $this->hasMany(UserPriviledges::class);
+        return $this->hasMany(UserPriviledge::class);
      }
 
      public function access_log(){
@@ -79,5 +79,13 @@ class User extends Authenticatable
 
      public function transactions(){
       return $this->hasMany(Transaction::class, 'user_id');
+     }
+
+     public function shop_access(){
+      return $this->hasMany(ShopAccess::class, 'user_id');
+     }
+   
+     public function shop(){
+      return $this->belongsTo(Shop::class, 'shop_id');
      }
 }

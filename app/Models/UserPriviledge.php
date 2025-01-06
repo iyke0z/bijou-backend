@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class UserPriviledges extends Model
+class UserPriviledge extends Model
 {
     use HasFactory;
     protected $guarded = ['id'];
@@ -15,6 +15,6 @@ class UserPriviledges extends Model
     }
 
     public function priviledge(){
-        return $this->belongsTo(Priviledges::class);
+        return $this->belongsTo(Priviledge::class, 'priviledges_id');
     }
 }

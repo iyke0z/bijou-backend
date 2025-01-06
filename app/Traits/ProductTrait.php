@@ -8,7 +8,7 @@ use App\Models\PurchaseLog;
 
 trait ProductTrait{
 
-    public static function log_product($productid, $action, $stock, $price, $user){
+    public static function log_product($productid, $action, $stock, $price, $user, $shopId){
         $product = Product::find($productid);
         if($product->exists()){
             // logprodcut
@@ -20,14 +20,15 @@ trait ProductTrait{
                     "new_price" => 0,
                     "old_stock" => $product->stock,
                     "new_stock" => $stock,
-                    "user_id" => $user
+                    "user_id" => $user,
+                    "shop_id" => $shopId
                 ]
             );
 
         }
     }
 
-    public static function log_purchase($detailid,$action, $stock, $price, $user){
+    public static function log_purchase($detailid,$action, $stock, $price, $user, $shopId){
         $detail = PurchaseDetails::find($detailid);
         if($detail->exists()){
             // logpurchase
@@ -39,7 +40,9 @@ trait ProductTrait{
                     "new_price" => $price,
                     "old_stock" => $detail->qty,
                     "new_stock" => $stock,
-                    "user_id" => $user
+                    "user_id" => $user,
+                    "shop_id" => $shopId
+
                 ]
             );
         }
