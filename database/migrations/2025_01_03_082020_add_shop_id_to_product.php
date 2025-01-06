@@ -14,7 +14,7 @@ class AddShopIdToProduct extends Migration
     public function up()
     {
         Schema::table('products', function (Blueprint $table) {
-            $table->integer('shop_id');
+            $table->integer('shop_id')->default(1);
         });
     }
 
