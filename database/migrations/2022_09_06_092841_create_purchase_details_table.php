@@ -17,8 +17,8 @@ class CreatePurchaseDetailsTable extends Migration
             $table->id();
             $table->integer('purchase_id');
             $table->integer('product_id');
-            $table->float('qty');
-            $table->float('cost');
+            $table->float('qty', 11, 2);
+            $table->float('cost', 11, 2);
             $table->softDeletes();
             $table->timestamps();
         });

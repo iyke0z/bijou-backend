@@ -1,6 +1,8 @@
 <?php
 
 namespace Database\Seeders;
+
+use App\Models\Product;
 use App\Models\Products;
 use Illuminate\Database\Seeder;
 
@@ -1039,7 +1041,7 @@ class ProductsSeeder extends Seeder
             'out_of_stock' =>$dat[$i]['out_of_stock'],
             'code' =>$dat[$i]['code'],
         ];
-        Products::create($product);
+        Product::create($product);
     }
     }
 }

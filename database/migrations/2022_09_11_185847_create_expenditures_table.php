@@ -16,7 +16,7 @@ class CreateExpendituresTable extends Migration
         Schema::create('expenditures', function (Blueprint $table) {
             $table->id();
             $table->integer('expenditure_type_id');
-            $table->float('amount');
+            $table->float('amount', 11, 2);
             $table->integer('user_id');
             $table->softDeletes();
             $table->timestamps();

@@ -18,33 +18,37 @@ class RolesPriviledge extends Seeder
     {
         $dat =  [
             ['role_id' => 1,
-            'privildedge_id' => 1],
+            'priviledge_id' => 1],
             ['role_id' => 1,
-            'privildedge_id' => 2],
+            'priviledge_id' => 2],
             ['role_id' => 1,
-            'privildedge_id' => 3],
+            'priviledge_id' => 3],
             ['role_id' => 1,
-            'privildedge_id' => 4],
+            'priviledge_id' => 4],
             ['role_id' => 1,
-            'privildedge_id' => 5],
+            'priviledge_id' => 5],
             ['role_id' => 1,
-            'privildedge_id' => 6],
+            'priviledge_id' => 6],
             ['role_id' => 1,
-            'privildedge_id' => 7],
+            'priviledge_id' => 7],
             ['role_id' => 1,
-            'privildedge_id' => 8],
+            'priviledge_id' => 8],
             ['role_id' => 1,
-            'privildedge_id' => 9],
+            'priviledge_id' => 9],
             ['role_id' => 1,
-            'privildedge_id' => 10],
+            'priviledge_id' => 10],
             ['role_id' => 1,
-            'privildedge_id' => 11],
+            'priviledge_id' => 11],
             ['role_id' => 1,
-            'privildedge_id' => 12]
+            'priviledge_id' => 12],
+            ['role_id' => 1,
+            'priviledge_id' => 13],
+            ['role_id' => 1,
+            'priviledge_id' => 14]
         ];
 
         foreach ($dat as $key => $value) {
-            $rolePriviledgeExists = RolePriviledge::where('role_id', $value['role_id'])->where('priviledge_id', $value['privildedge_id'])
+            $rolePriviledgeExists = RolePriviledge::where('role_id', $value['role_id'])->where('priviledge_id', $value['priviledge_id'])
             ->first();
 
             if ($rolePriviledgeExists) {

@@ -71,10 +71,24 @@ class TransactionRepository implements TransactionRepositoryInterface{
             $request['is_order'] == false ? $transaction->type = "sold" : null;
             $request['is_order'] == false ? $transaction->amount  = $request['amount'] : null;
             $request['is_order'] == false ? $transaction->payment_method = $request['payment_method'] : null;
+            $request['payment_method'] == "part_payment" ? $transaction->payment_method = "on_credit" : $transaction->payment_method =  $request['payment_method'];
+            $request['payment_method'] == "part_payment" ? $transaction->is_part_payment = 1 : 0;
+            $request['payment_method'] == "part_payment" ? $transaction->part_payment_amount = $request['part_payment_amount'] : 0;
             $transaction->table_description = $request['description'];
             $transaction->customer_id = $request['customer_id'] ?? $request['customer_id'];
             $transaction->shop_id = $shopId;
             $transaction->save();
+
+            if ( $request['is_order'] == false && $request['payment_method'] != "on_credit" || $request['payment_method'] != 'part_payment_amount') {
+                bankService(
+                    $request['amount'], 
+                    "SALES", 
+                    $transaction->id,
+                    $shopId,
+                "CREDIT"
+
+                );
+            }
             // create new sales order
 
             for ($i=0; $i < count($request['products']) ; $i++) {
@@ -99,6 +113,21 @@ class TransactionRepository implements TransactionRepositoryInterface{
                 $customer->wallet_balance = $customer->wallet_balance - $request["amount"];
                 $customer->save();
             }
+
+            if($request['payment_method'] == "part_payment"){
+                $customer = Customer::find($request["customer_id"]);
+                $customer->wallet_balance = $customer->wallet_balance - ($request["amount"] - $request["part_payment_amount"]);
+                $customer->save();
+
+                bankService(
+                    $request['amount'], 
+                    "SALES PART PAYMENT", 
+                    $transaction->id,
+                    $shopId,
+                    "CREDIT"
+                );
+            }
+            
             return res_success('sale order created', $sale);
         }
 
@@ -166,6 +195,14 @@ class TransactionRepository implements TransactionRepositoryInterface{
             $transaction->bank_id = $request["bank_id"];
             $transaction->status = 'completed';
             $transaction->save();
+
+            bankService(
+                $request['amount'], 
+                "SALES", 
+                $transaction->id,
+                $shopId,
+                "CREDIT"
+            );
 
             if($request['payment_method'] == "split"){
                 foreach ($request["split"] as $split) {

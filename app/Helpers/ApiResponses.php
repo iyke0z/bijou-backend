@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\BusinessTime;
+use App\Models\Liquidity;
 
 if (!function_exists('applyShopFilter')) {
     function applyShopFilter($query, $shopId)
@@ -195,5 +196,39 @@ if (!function_exists('getBusinessTime')) {
     {
         $business_time = BusinessTime::first();
         return $business_time;
+    }
+}
+
+
+if (!function_exists('bankService')) {
+    function bankService($transaction_amount, $remark, $transaction_reference, $shopId, $transaction_type)
+    {
+        $liquidityPreviousBalance = Liquidity::where('shop_id', $shopId)->latest()->first();
+        if ($liquidityPreviousBalance) {
+            Liquidity::create(
+                [
+                    "previous_balance" => $liquidityPreviousBalance->current_balance, 
+                    "current_balance" => $transaction_type == "CREDIT" ? $transaction_amount + $liquidityPreviousBalance->current_balance : $liquidityPreviousBalance->current_balance -  $transaction_amount  , 
+                    "transaction_amount" => $transaction_amount, 
+                    "remark" => $remark, 
+                    "transaction_reference" => $transaction_reference, 
+                    "shop_id" => $shopId,
+                    "transaction_type" => $transaction_type
+                ]
+            );
+        }else{
+                Liquidity::create(
+                    [
+                        "previous_balance" => 0, 
+                        "current_balance" => $transaction_type == "CREDIT" ? 0 + $transaction_amount: 0 -  $transaction_amount  , 
+                        "transaction_amount" => $transaction_amount, 
+                        "remark" => $remark, 
+                        "transaction_reference" => $transaction_reference, 
+                        "shop_id" => $shopId,
+                        "transaction_type" => $transaction_type
+                    ]
+                );
+        }
+        
     }
 }

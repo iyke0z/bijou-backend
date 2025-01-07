@@ -17,10 +17,10 @@ class CreateProductLogsTable extends Migration
             $table->id();
             $table->integer('product_id');
             $table->enum('action',['update','sold','purchase','purchase_update']);
-            $table->float('old_price');
-            $table->float('new_price')->nullable();
-            $table->float('old_stock');
-            $table->float('new_stock')->nullable();
+            $table->float('old_price', 11, 2);
+            $table->float('new_price', 11, 2)->nullable();
+            $table->float('old_stock', 11, 2);
+            $table->float('new_stock', 11, 2)->nullable();
             $table->integer('user_id');
             $table->timestamps();
         });

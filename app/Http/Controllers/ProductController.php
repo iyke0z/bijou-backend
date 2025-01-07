@@ -122,6 +122,48 @@ class ProductController extends Controller
         return $this->productRepo->delete_purchase($id);
     }
 
+    public function updatePaymentPlan(Request $request, $id){
+        $purchase_detail = PurchaseDetails::find($id);
+        $shopId = request()->query('shop_id');
+
+        if ($purchase_detail) {
+            $purchase_detail->update([
+                "payment_method" => $request["payment_method"],
+                "payment_status" => $request["payment_status"],
+                "part_payment_amount" => $request["part_payment_amount"],
+                "duration" => $request["duration"]
+            ]);
+
+            if ($request["payment_status"] == 'paid') {
+                bankService(
+                    $purchase_detail['cost'] * $purchase_detail['qty'], 
+                    "EXPENDITURE COGS - PAID",
+                    $purchase_detail->purchase_id,
+                    $shopId,
+                    "DEBIT"
+                );
+            }else if ($request['payment_method'] == 'part_payment') {
+                bankService(
+                    $request['part_payment_amount'], 
+                    "EXPENDITURE COGS - PART PAYMENT",
+                    $purchase_detail->purchase_id,
+                    $shopId,
+                    "DEBIT"
+                );
+            }else{
+                bankService(
+                    $purchase_detail['cost'] * $purchase_detail['qty'], 
+                    "EXPENDITURE COGS - CREDIT",
+                    $purchase_detail->purchase_id,
+                    $shopId,
+                    "DEBIT"
+                );
+            }
+        }
+
+        return res_completed('updated');
+    }
+
     public function all_purchases(Request $request){
         $shopId = $request->query('shop_id');
 

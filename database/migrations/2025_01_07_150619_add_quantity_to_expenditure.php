@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class AddPreviousStockToPurchases extends Migration
+class AddQuantityToExpenditure extends Migration
 {
     /**
      * Run the migrations.
@@ -13,8 +13,8 @@ class AddPreviousStockToPurchases extends Migration
      */
     public function up()
     {
-        Schema::table('purchase_details', function (Blueprint $table) {
-            $table->float('previous_stock', 11, 2)->default(0);
+        Schema::table('expenditures', function (Blueprint $table) {
+            $table->float('qty', 11, 2);
         });
     }
 
@@ -25,8 +25,8 @@ class AddPreviousStockToPurchases extends Migration
      */
     public function down()
     {
-        Schema::table('purchase_details', function (Blueprint $table) {
-            $table->dropColumn('previous_stock');
+        Schema::table('expenditures', function (Blueprint $table) {
+            $table->dropColumn('qty');
         });
     }
 }

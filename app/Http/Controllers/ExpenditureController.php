@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Expenditure;
 use App\Models\ExpenditureType;
+use App\Models\PurchaseDetails;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -72,6 +73,7 @@ class ExpenditureController extends Controller
             Expenditure::create([
                 'expenditure_type_id' => $request['expenditure_type_id'],
                 'amount' => $request['amount'],
+                'qty' => $request['qty'],
                 'user_id' => Auth::user()->id,
                 'shop_id' => $shopId
 
@@ -87,6 +89,8 @@ class ExpenditureController extends Controller
             $validated = Validator::make($request->all(), [
                 'expenditure_type_id' => 'required',
                 'amount' => 'required',
+                'qty' => $request['qty'],
+
             ]);
             if($validated){
                 $find->update([
@@ -125,5 +129,49 @@ class ExpenditureController extends Controller
                                 ->with('type')->with('user'), $shopId)->get();
             return res_success('expenditures', $report);
         }
+    }
+
+  
+
+    public function updateExpenditurPaymentPlan(Request $request, $id){
+        $expenditure = Expenditure::find($id);
+        $shopId = request()->query('shop_id');
+        if ($expenditure) {
+            $expenditure->update([
+                "payment_method" => $request["payment_method"],
+                "payment_status" => $request["payment_status"],
+                "part_payment_amount" => $request["part_payment_amount"],
+                "duration" => $request["duration"]
+            ]);
+
+            if ($request["payment_status"] == 'paid') {
+                bankService(
+                    $expenditure['amount'], 
+                    "EXPENDITURE - PAID",
+                    $expenditure->id,
+                    $shopId,
+                    "DEBIT"
+                );
+            }else if ($request['payment_method'] == 'part_payment') {
+                bankService(
+                    $request['part_payment_amount'], 
+                    "EXPENDITURE - PART PAYMENT",
+                    $expenditure->id,
+                    $shopId,
+                    "DEBIT"
+                );
+            }else{
+                bankService(
+                    $expenditure['amount'], 
+                    "EXPENDITURE - CREDIT",
+                    $expenditure->id,
+                    $shopId,
+                    "DEBIT"
+                );
+            }
+        }
+        
+        return res_completed('updated');
+
     }
 }

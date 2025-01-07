@@ -17,8 +17,8 @@ class AddUsefulLifeAverage extends Migration
         DB::statement("ALTER TABLE `expenditure_types` MODIFY COLUMN `expenditure_type` ENUM('cogs', 'opex', 'capex') NOT NULL DEFAULT 'opex'");
 
         Schema::table('expenditure_types', function (Blueprint $table) {
-            $table->float('useful_life')->nullable();
-            $table->float('salvage_value')->nullable();
+            $table->float('useful_life', 11, 2)->nullable();
+            $table->float('salvage_value', 11, 2)->nullable();
         });
     }
 

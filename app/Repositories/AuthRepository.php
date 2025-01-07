@@ -7,6 +7,7 @@ use App\Models\BusinessDetails;
 use App\Models\BusinessTime;
 use App\Models\LoginLog;
 use App\Models\Shop;
+use App\Models\ShopAccess;
 use App\Models\User;
 use App\Models\WaiterCode;
 use Carbon\Carbon;
@@ -69,11 +70,16 @@ class AuthRepository implements AuthRepositoryInterface{
 
         // create shop
         Shop::create([
-            "title" => "Default shop",
+            "title" => "Main shop",
             "address" => "default address",
             "status" => "active",
             "contact_person" => "Default User",
             "phone_number" => $request["phone_one"]
+        ]);
+
+        ShopAccess::create([
+            "shop_id" => 1,
+            "user_id" => 1
         ]);
         return res_completed('created');
     }

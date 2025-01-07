@@ -20,7 +20,10 @@ class RoleSeed extends Seeder
             $name = [
                 "name" => $dat[$i]
             ];
-            Role::create($name);
+            $roleExist = Role::where('name', $dat[$i])->first();
+            if (!$roleExist) {
+                Role::create($name);
+            }
         }
 
 

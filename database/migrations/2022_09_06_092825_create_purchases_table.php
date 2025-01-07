@@ -15,8 +15,8 @@ class CreatePurchasesTable extends Migration
     {
         Schema::create('purchases', function (Blueprint $table) {
             $table->id();
-            $table->float('price')->nullable();
-            $table->float('added_costs')->nullable();
+            $table->float('price', 11, 2)->nullable();
+            $table->float('added_costs', 11, 2)->nullable();
             $table->integer('user_id');
             $table->softDeletes();
             $table->timestamps();

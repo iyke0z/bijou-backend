@@ -18,7 +18,7 @@ class CreateSplitPaymentsTable extends Migration
             $table->id();
             $table->integer('transaction_id');
             $table->enum('payment_method', ['cash', 'transfer', 'card',]);
-            $table->float('amount');
+            $table->float('amount', 11, 2);
             $table->integer('bank_id')->nullable();
             $table->timestamps();
         });

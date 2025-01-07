@@ -16,7 +16,7 @@ class CreateTransactionsTable extends Migration
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
             $table->enum('type', ['new_acount','credit', 'debit', 'sold','cancelled', 'on_credit'])->nullable();
-            $table->float('amount')->default(0);
+            $table->float('amount', 11 ,2)->default(0);
             $table->integer('customer_id')->nullable();
             $table->enum('platform', ['online','offline'])->default('offline');
             $table->enum('payment_method', ['cash', 'transfer', 'card', 'wallet', 'on_credit', 'pod', 'split', "complementary"])->nullable();

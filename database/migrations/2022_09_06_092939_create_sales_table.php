@@ -17,8 +17,8 @@ class CreateSalesTable extends Migration
             $table->id();
             $table->integer('product_id');
             $table->string('ref');
-            $table->float('price');
-            $table->float('qty');
+            $table->float('price', 11, 2);
+            $table->float('qty', 11 ,2);
             $table->integer('user_id');
             $table->enum('prep_status', ['not_ready','almost_ready','ready'])->default('not_ready');
             $table->timestamps();

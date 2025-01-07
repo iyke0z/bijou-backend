@@ -28,13 +28,18 @@ class PriviledgeSeeder extends Seeder
             "can_manage_banks",
             "can_manage_shops",
             "can_manage_payroll",
+            "can_manage_vendors",
+            "can_see_liquidity"
     ];
 
         for ($i=0; $i < count($dat) ; $i++) {
             $name = [
               "name" => $dat[$i]
             ];
-            Priviledge::create($name);
+            $priviledgeExists = Priviledge::where('name', $dat[$i])->first();
+            if (!$priviledgeExists) {
+                Priviledge::create($name);
+            }
         }
     }
 }

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Shop;
+use App\Models\ShopAccess;
 use Illuminate\Database\Seeder;
 
 class ShopSeeder extends Seeder
@@ -25,6 +26,15 @@ class ShopSeeder extends Seeder
                 "status" => "active",
             ]);
         }
+
+        $accessExists = ShopAccess::where('shop_id', 1)->where('user_id', 1)->first();
+        if (!$accessExists) {
+            ShopAccess::create([
+                "shop_id" => 1,
+                "user_id" => 1
+            ]);
+        }
+        
        
     }
 }

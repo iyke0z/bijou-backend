@@ -65,7 +65,7 @@ Route::prefix('v1')->group(function (){
             ->with('access_log')
             ->with('access_code')
             ->with('shop_access.shop')
-            // ->with('expenditure_types')
+            // ->with('expenditure_types')c
             // ->with('expenditure')
             ->find($request->user()->id);
             return $user;
@@ -115,6 +115,7 @@ Route::prefix('v1')->group(function (){
             Route::post('/delete/{id}', [ProductController::class, 'delete_purchase'])->middleware('IaActive');
             Route::get('/', [ProductController::class, 'all_purchases'])->middleware('IaActive');
             Route::post('/report', [ProductController::class, 'purchase_report'])->middleware('IaActive');
+            Route::put('/update-plan/{id}', [ProductController::class, 'updatePaymentPlan'])->middleware('IaActive');
         });
         Route::prefix('customer')->middleware('checkPermission:can_manage_customers')->group(function (){
             Route::post('/create', [CustomerController::class, 'create_customer'])->middleware('IaActive');
@@ -161,6 +162,7 @@ Route::prefix('v1')->group(function (){
             Route::post('/delete/{id}', [ExpenditureController::class, 'delete_expenditure'])->middleware('IaActive');
             Route::get('/', [ExpenditureController::class, 'all_expenditures']);
             Route::post('/report', [ExpenditureController::class, 'report'])->middleware('IaActive');
+            Route::put('/update-plan/{id}', [ExpenditureController::class, 'updateExpenditurPaymentPlan'])->middleware('IaActive');            
         });
 
         Route::prefix('report')->middleware('checkPermission:can_view_reports')->group(function (){
@@ -172,7 +174,9 @@ Route::prefix('v1')->group(function (){
             Route::post('/cogs-performance', [ReportController::class, 'getCogs'])->middleware('IaActive');
             Route::post('/method-performance', [ReportController::class, 'getPaymentMethodPerformance'])->middleware('IaActive');
             Route::post('/profit-loss', [ReportController::class, 'getProfitLoss'])->middleware('IaActive');
-            
+            Route::get('/bank-balance', [ReportController::class, 'getBankAccountBalance'])->middleware('IaActive');
+            Route::post('/bank-statement', [ReportController::class, 'getBankStatement'])->middleware('IaActive');
+            Route::post('/payables', [ReportController::class, 'getPayables'])->middleware('IaActive');
         });
 
         Route::prefix('banks')->middleware('checkPermission:can_manage_banks')->group(function (){

@@ -18,8 +18,8 @@ class CreateProductsTable extends Migration
             $table->string('name');
             $table->string('code')->nullable();
             $table->integer('category_id');
-            $table->float('stock');
-            $table->float('price');
+            $table->float('stock', 11, 2);
+            $table->float('price', 11, 2);
             $table->integer('out_of_stock')->default(1);
             $table->softDeletes();
             $table->timestamps();

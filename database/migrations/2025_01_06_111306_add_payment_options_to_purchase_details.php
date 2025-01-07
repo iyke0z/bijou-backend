@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class AddPreviousStockToPurchases extends Migration
+class AddPaymentOptionsToPurchaseDetails extends Migration
 {
     /**
      * Run the migrations.
@@ -14,7 +14,8 @@ class AddPreviousStockToPurchases extends Migration
     public function up()
     {
         Schema::table('purchase_details', function (Blueprint $table) {
-            $table->float('previous_stock', 11, 2)->default(0);
+            $table->float('part_payment_amount', 11, 2)->default(0);
+            $table->integer('duration')->default(0);
         });
     }
 
@@ -26,7 +27,7 @@ class AddPreviousStockToPurchases extends Migration
     public function down()
     {
         Schema::table('purchase_details', function (Blueprint $table) {
-            $table->dropColumn('previous_stock');
+            $table->dropColumn(['part_payment_amount', 'duration']);
         });
     }
 }

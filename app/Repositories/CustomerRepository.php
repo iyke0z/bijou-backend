@@ -58,6 +58,7 @@ class CustomerRepository implements CustomerRepositoryInterface{
     }
 
     public function fund_wallet($customer, $request, $id){
+            $shopId = request()->query('shop_id');
             $customer->wallet_balance = $customer->wallet_balance + $request['amount'];
             $customer->save();
             // log
@@ -66,9 +67,18 @@ class CustomerRepository implements CustomerRepositoryInterface{
             $transaction->amount = $request['amount'];
             $transaction->customer_id = $id;
             $transaction->user_id = Auth::user()->id;
+            $transaction->shop_id = $shopId;
             // $transaction->payment_method = RefCode::gen_ref_code();
             $transaction->platform = $request['platform'] == 'offline' ? 'offline' : 'online';
             $transaction->save();
+
+            bankService(
+                $request['amount'], 
+                "FUND CUSTOMER WALLET", 
+                $transaction->id,
+                $shopId,
+                "CREDIT"
+            );
     }
 
     public function delete_customer($id){

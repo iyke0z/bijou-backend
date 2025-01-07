@@ -6,6 +6,7 @@ use App\Models\Banks;
 use App\Models\BusinessDetails;
 use App\Models\Customer;
 use App\Models\Expenditure;
+use App\Models\Liquidity;
 use App\Models\Purchase;
 use App\Models\PurchaseDetails;
 use App\Models\Sales;
@@ -71,7 +72,6 @@ class ReportController extends Controller
             return res_success('report', $report);
         }
     }
-
     public function cancelled_receipt(Request $request){
         $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
         $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
@@ -102,7 +102,6 @@ class ReportController extends Controller
 
         }
     }
-
     public function generate_sales_report(Request $request){
         $user = $request['user_id'];
         $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
@@ -426,7 +425,6 @@ class ReportController extends Controller
 
         return $total;
     }
-
     public function getSalesPerformance(Request $request){
         $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
         $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
@@ -444,7 +442,6 @@ class ReportController extends Controller
 
         return res_success('success', $sales);
     }
-
     public function getOpexPerformance(Request $request){
         $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
         $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
@@ -468,7 +465,6 @@ class ReportController extends Controller
             return res_success('expenditures', $report);
         }
     }
-
     public function getCustomerInsightPerformance(Request $request){
         $shopId = request()->query('shop_id');
             $report = applyShopFilter(Customer::select(DB::raw('fullname') , DB::raw('ABS(wallet_balance) as wallet_balance'))
@@ -476,7 +472,39 @@ class ReportController extends Controller
             
             return res_success('expenditures', [$report->get(), $report->sum('wallet_balance')]);
     }
+    public function getPayables(Request $request){
+        $shopId = request()->query('shop_id');
+        $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
+        $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
+        // payables are registered in liquidity as debit, but on credit
+        $expenditures_credit = applyShopFilter(Expenditure::where('payment_status', 'not_paid')
+                                ->where('payment_method', 'on_credit')
+                                ->whereBetween('created_at', [$start_date, $end_date]), $shopId)
+                                ->get();
+        
+        $expenditures_part_payment = applyShopFilter(Expenditure::where('payment_status', 'not_paid')
+                                        ->where('payment_method', 'part_payment')
+                                        ->whereBetween('created_at', [$start_date, $end_date]), $shopId)
+                                        ->get();
+        
+        $purchases_part_credit = applyShopFilter(PurchaseDetails::where('payment_status', 'not_paid')
+                                    ->where('payment_method', 'on_credit')
+                                    ->whereBetween('created_at', [$start_date, $end_date]), $shopId)
+                                    ->get();
+        
+        $purchases_part_payment = applyShopFilter(PurchaseDetails::where('payment_status', 'not_paid')
+                                    ->where('payment_method', 'part_payment')
+                                    ->whereBetween('created_at', [$start_date, $end_date]), $shopId)->get();
 
+            $payable = [
+                "expenditures_credit" => $expenditures_credit,
+                "expenditures_part_payment" => $expenditures_part_payment,
+                "purchases_part_credit" => $purchases_part_credit,
+                "purchases_part_payment" => $purchases_part_payment
+            ];
+
+            return res_success('succes', $payable);
+    }
     public function getCogs(Request $request){
         $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
         $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
@@ -532,7 +560,6 @@ class ReportController extends Controller
 
         }
     }
-
     public function getPaymentMethodPerformance(Request $request){
         $shopId = request()->query('shop_id');
         $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
@@ -553,7 +580,6 @@ class ReportController extends Controller
         return res_success('success', $payment_method_distr);
 
     }
-
     public function getProfitLoss(Request $request){
         $shopId = request()->query('shop_id');
         // const turnover = computed(() => {
@@ -575,10 +601,12 @@ class ReportController extends Controller
         //   const netMargin = computed(() => (netProfit.value / turnover.value) * 100);
         $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
         $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
+        
         $validated = Validator::make($request->all(), [
             'start_date' => 'required',
             'end_date' => 'required'
         ]);
+
         $sales = applyShopFilter(Transaction::where('type', 'sold')
                     ->whereBetween('created_at', [$start_date, $end_date])
                     ->where('status', 'completed'), $shopId
@@ -592,7 +620,7 @@ class ReportController extends Controller
                     $query->where('expenditure_type', 'opex'); // Assuming 'name' is a column in the expenditure_type table
                 }), $shopId)->sum('amount');
         
-        $assets = applyShopFilter(Expenditure::with('type')->whereHas('type', function ($query) {
+        $assets = applyShopFilter(Expenditure::with('type')->whereBetween('created_at', [$start_date, $end_date])->whereHas('type', function ($query) {
             $query->where('expenditure_type', 'capex');}), $shopId)->get();
 
         $annual_depreciation = 0;
@@ -641,7 +669,7 @@ class ReportController extends Controller
             "net_profit" => $net_profit,
             "gross_profit_margin" => $gross_profit_margin,
             "net_profit_margin" => $net_profit_margin,
-            "lets_See" => $this->opening_time."=".$this->closing_time,
+            "lets_See" =>[$opex , $cogs ,$cogs_exp ,$monthly_depreciation. $assets],
             "accounting_balance" => $this->getAccountingBalance($start_date, $end_date)
 
         ];
@@ -649,7 +677,6 @@ class ReportController extends Controller
         return res_success('success', $result);
 
     }
-
     public function getAccountingBalance($start_date, $end_date)
     {
         $shopId = request()->query('shop_id');
@@ -687,5 +714,27 @@ class ReportController extends Controller
             "closing_cash_balance" => $closing_cash,
             "closing_receivables_balance" => $closing_receivables
         ];
+    }
+
+    public function getBankAccountBalance(){
+        $shopId = request()->query('shop_id');
+        $liq = applyShopFilter(Liquidity::latest(), $shopId)->first();
+
+        if($liq){
+            return res_success('amount', $liq->current_balance);
+        }
+        return res_success('amount', 0);
+    }
+
+    public function getBankStatement(Request $request){
+        $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
+        $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
+        $shopId = request()->query('shop_id');
+
+        $liquidity = applyShopFilter(Liquidity::where('shop_id', $shopId)
+                    ->whereBetween("created_at", [$start_date, $end_date]), $shopId)
+                        ->get();
+
+        return res_success('message', $liquidity);
     }
 }
