@@ -24,7 +24,6 @@ jobs:
           - dreambarbers
           - 24hrs
 
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -39,6 +38,9 @@ jobs:
             exit 0
           fi
 
+      - name: List changed folders (Debug)
+        run: echo $CHANGED_FOLDERS
+
       - name: Deploy to Folder
         if: contains(env.CHANGED_FOLDERS, matrix.folder)
         uses: appleboy/scp-action@v0.1.5
@@ -46,7 +48,7 @@ jobs:
           host: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          source: ./
+          source: ./{{ matrix.folder }}/  # Adjusted source to the specific folder
           target: ${{ secrets.FTP_PATH }}/business_sites/${{ matrix.folder }}/api/
           port: 22
 
