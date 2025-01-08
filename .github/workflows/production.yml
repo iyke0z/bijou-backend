@@ -29,6 +29,9 @@ jobs:
         run: |
           echo "Checking remote folder for updates"
           sshpass -p "${{ secrets.FTP_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.FTP_USERNAME }}@${{ secrets.SERVER_IP }} << EOF
+            # Ensure git uses SSH and not HTTPS
+            git config --global url."git@github.com:".insteadOf "https://github.com/"
+            
             cd /home/ngmktsit/www/business_sites/amasemporium/api
             git fetch --all
             LOCAL_HASH=$(git rev-parse HEAD)
