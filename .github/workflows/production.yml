@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
-        
+
       - name: Identify Changed Folders
         id: detect-changes
         run: |
@@ -25,13 +25,23 @@ jobs:
           fi
 
       # Check and Upload to amasemporium/api
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          # Add GitHub to known hosts to avoid SSH verification issues
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
       - name: Check if Remote Folder is Up-to-Date (amasemporium/api)
         run: |
           echo "Checking remote folder for updates"
+          
+          # Ensure git uses SSH and not HTTPS
+          git config --global url."git@github.com:".insteadOf "https://github.com/"
+          
+          # Perform git operations
           sshpass -p "${{ secrets.FTP_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.FTP_USERNAME }}@${{ secrets.SERVER_IP }} << EOF
-            # Ensure git uses SSH and not HTTPS
-            git config --global url."git@github.com:".insteadOf "https://github.com/"
-            
             cd /home/ngmktsit/www/business_sites/amasemporium/api
             git fetch --all
             LOCAL_HASH=$(git rev-parse HEAD)
