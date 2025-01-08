@@ -11,19 +11,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository
       - name: Checkout Repository
         uses: actions/checkout@v3
-
-      # Step 2: Set up SSH key
-      - name: Set up SSH Key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.FTP_HOST }} >> ~/.ssh/known_hosts
-
-      # Step 3: Identify changed folders
+        
       - name: Identify Changed Folders
         id: detect-changes
         run: |
@@ -34,31 +24,45 @@ jobs:
             exit 0
           fi
 
-      # Step 4: Check if remote folder is up-to-date
+      # Check and Upload to amasemporium/api
       - name: Check if Remote Folder is Up-to-Date (amasemporium/api)
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_HOST }} \
-          "cd /home/ngmktsit/www/business_sites/amasemporium/api && git fetch && git diff --quiet || exit 1"
+          echo "Checking remote folder for updates"
+          sshpass -p "${{ secrets.FTP_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.FTP_USERNAME }}@${{ secrets.SERVER_IP }} << EOF
+            cd /home/ngmktsit/www/business_sites/amasemporium/api
+            git fetch --all
+            LOCAL_HASH=$(git rev-parse HEAD)
+            REMOTE_HASH=$(git rev-parse origin/main)
+
+            if [ "$LOCAL_HASH" == "$REMOTE_HASH" ]; then
+              echo "No changes detected. Skipping deployment."
+              exit 0
+            else
+              echo "Changes detected, proceeding with deployment."
+            fi
+          EOF
         continue-on-error: true
 
-      # Step 5: Upload files using Rsync
-      - name: Upload Files Using Rsync
+      - name: Upload Files to amasemporium/api
         if: success()
-        run: |
-          rsync -azP --delete \
-          -e "ssh -o StrictHostKeyChecking=no" ./ \
-          ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_HOST }}:/home/ngmktsit/www/business_sites/amasemporium/api/
+        uses: appleboy/scp-action@v0.1.5
+        with:
+          host: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          source: ./
+          target: ${{ secrets.FTP_PATH }}/business_sites/amasemporium/api/
+          port: 22
 
-      # Step 6: Run PHP Artisan Commands
       - name: Run PHP Artisan Command on amasemporium/api
         if: success()
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          password: ${{ secrets.FTP_PASSWORD }}
           port: 22
           script: |
             cd /home/ngmktsit/www/business_sites/amasemporium/api
-            php artisan migrate --force
-            php artisan optimize:clear
+            php artisan migrate
+            php artisan clean
