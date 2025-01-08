@@ -28,8 +28,13 @@ jobs:
       - name: Check if Remote Folder is Up-to-Date (amasemporium/api)
         run: |
           echo "Checking remote folder for updates"
-          ssh ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_HOST }} "cd /home/ngmktsit/www/business_sites/amasemporium/api && git diff --exit-code"
+          lftp -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ${{ secrets.FTP_HOST }} <<EOF
+          cd /home/ngmktsit/www/business_sites/amasemporium/api
+          mirror --reverse --dry-run --only-newer ./local-folder ./
+          bye
+          EOF
         continue-on-error: true
+
         
       - name: Upload Files to amasemporium/api
         if: success()
