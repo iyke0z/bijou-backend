@@ -9,8 +9,8 @@ jobs:
   test-sftp:
     name: Test SFTP Connection and Deploy to Multiple Folders
     runs-on: ubuntu-latest
-    
-    steps:
+  
+  steps:
       - name: Checkout Repository
       uses: actions/checkout@v3
 
