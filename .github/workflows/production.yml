@@ -11,9 +11,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout the repository
       - name: Checkout Repository
         uses: actions/checkout@v3
-        
+
+      # Step 2: Set up SSH key
+      - name: Set up SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.FTP_HOST }} >> ~/.ssh/known_hosts
+
+      # Step 3: Identify changed folders
       - name: Identify Changed Folders
         id: detect-changes
         run: |
@@ -24,193 +34,31 @@ jobs:
             exit 0
           fi
 
-      # Check and Upload to amasemporium/api
+      # Step 4: Check if remote folder is up-to-date
       - name: Check if Remote Folder is Up-to-Date (amasemporium/api)
         run: |
-          echo "Checking remote folder for updates"
-          lftp -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ${{ secrets.FTP_HOST }} <<EOF
-          cd /home/ngmktsit/www/business_sites/amasemporium/api
-          mirror --reverse --dry-run --only-newer ./local-folder ./
-          bye
-          EOF
+          ssh -o StrictHostKeyChecking=no ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_HOST }} \
+          "cd /home/ngmktsit/www/business_sites/amasemporium/api && git fetch && git diff --quiet || exit 1"
         continue-on-error: true
 
-        
-      - name: Upload Files to amasemporium/api
+      # Step 5: Upload files using Rsync
+      - name: Upload Files Using Rsync
         if: success()
-        uses: appleboy/scp-action@v0.1.5
-        with:
-          host: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          source: ./
-          target: ${{ secrets.FTP_PATH }}/business_sites/amasemporium/api/
-          port: 22
+        run: |
+          rsync -azP --delete \
+          -e "ssh -o StrictHostKeyChecking=no" ./ \
+          ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_HOST }}:/home/ngmktsit/www/business_sites/amasemporium/api/
 
+      # Step 6: Run PHP Artisan Commands
       - name: Run PHP Artisan Command on amasemporium/api
         if: success()
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
             cd /home/ngmktsit/www/business_sites/amasemporium/api
-            php artisan migrate
-            php artisan clean
-
-      # Check and Upload to bingoml/api
-      - name: Check if Remote Folder is Up-to-Date (bingoml/api)
-        run: |
-          echo "Checking remote folder for updates"
-          ssh ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_HOST }} "cd /home/ngmktsit/www/business_sites/bingoml/api && git diff --exit-code"
-        continue-on-error: true
-        
-      - name: Upload Files to bingoml/api
-        if: success()
-        uses: appleboy/scp-action@v0.1.5
-        with:
-          host: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          source: ./
-          target: ${{ secrets.FTP_PATH }}/business_sites/bingoml/api/
-          port: 22
-
-      - name: Run PHP Artisan Command on bingoml/api
-        if: success()
-        uses: appleboy/ssh-action@v0.1.6
-        with:
-          host: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: 22
-          script: |
-            cd /home/ngmktsit/www/business_sites/bingoml/api
-            php artisan migrate
-            php artisan clean
-
-      # Check and Upload to edzain/api
-      - name: Check if Remote Folder is Up-to-Date (edzain/api)
-        run: |
-          echo "Checking remote folder for updates"
-          ssh ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_HOST }} "cd /home/ngmktsit/www/business_sites/edzain/api && git diff --exit-code"
-        continue-on-error: true
-        
-      - name: Upload Files to edzain/api
-        if: success()
-        uses: appleboy/scp-action@v0.1.5
-        with:
-          host: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          source: ./
-          target: ${{ secrets.FTP_PATH }}/business_sites/edzain/api/
-          port: 22
-
-      - name: Run PHP Artisan Command on edzain/api
-        if: success()
-        uses: appleboy/ssh-action@v0.1.6
-        with:
-          host: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: 22
-          script: |
-            cd /home/ngmktsit/www/business_sites/edzain/api
-            php artisan migrate
-            php artisan clean
-
-      # Check and Upload to ugbommaintefarms/api
-      - name: Check if Remote Folder is Up-to-Date (ugbommaintefarms/api)
-        run: |
-          echo "Checking remote folder for updates"
-          ssh ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_HOST }} "cd /home/ngmktsit/www/business_sites/ugbommaintefarms/api && git diff --exit-code"
-        continue-on-error: true
-        
-      - name: Upload Files to ugbommaintefarms/api
-        if: success()
-        uses: appleboy/scp-action@v0.1.5
-        with:
-          host: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          source: ./
-          target: ${{ secrets.FTP_PATH }}/business_sites/ugbommaintefarms/api/
-          port: 22
-
-      - name: Run PHP Artisan Command on ugbommaintefarms/api
-        if: success()
-        uses: appleboy/ssh-action@v0.1.6
-        with:
-          host: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: 22
-          script: |
-            cd /home/ngmktsit/www/business_sites/ugbommaintefarms/api
-            php artisan migrate
-            php artisan clean
-
-      # Check and Upload to dreambarbers/api
-      - name: Check if Remote Folder is Up-to-Date (dreambarbers/api)
-        run: |
-          echo "Checking remote folder for updates"
-          ssh ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_HOST }} "cd /home/ngmktsit/www/business_sites/dreambarbers/api && git diff --exit-code"
-        continue-on-error: true
-        
-      - name: Upload Files to dreambarbers/api
-        if: success()
-        uses: appleboy/scp-action@v0.1.5
-        with:
-          host: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          source: ./
-          target: ${{ secrets.FTP_PATH }}/business_sites/dreambarbers/api/
-          port: 22
-
-      - name: Run PHP Artisan Command on dreambarbers/api
-        if: success()
-        uses: appleboy/ssh-action@v0.1.6
-        with:
-          host: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: 22
-          script: |
-            cd /home/ngmktsit/www/business_sites/dreambarbers/api
-            php artisan migrate
-            php artisan clean
-
-      # Check and Upload to 24hrs/api
-      - name: Check if Remote Folder is Up-to-Date (24hrs/api)
-        run: |
-          echo "Checking remote folder for updates"
-          ssh ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_HOST }} "cd /home/ngmktsit/www/business_sites/24hrs/api && git diff --exit-code"
-        continue-on-error: true
-        
-      - name: Upload Files to 24hrs/api
-        if: success()
-        uses: appleboy/scp-action@v0.1.5
-        with:
-          host: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          source: ./
-          target: ${{ secrets.FTP_PATH }}/business_sites/24hrs/api/
-          port: 22
-
-      - name: Run PHP Artisan Command on 24hrs/api
-        if: success()
-        uses: appleboy/ssh-action@v0.1.6
-        with:
-          host: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: 22
-          script: |
-            cd /home/ngmktsit/www/business_sites/24hrs/api
-            php artisan migrate
-            php artisan clean
+            php artisan migrate --force
+            php artisan optimize:clear
