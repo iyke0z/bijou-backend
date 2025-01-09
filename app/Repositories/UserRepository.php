@@ -129,20 +129,16 @@ class UserRepository implements UserRepositoryInterface{
     }
 
     public function create_role($request){
-        $already_exists = [];
-        for ($i=0; $i < count($request) ; $i++) {
-            $check = Role::where('name', strtolower($request[$i]))->first();
+        $shopId = request()->query('shop_id');
+            $check = applyShopFilter(Role::where('name', $request[0]), $shopId)->first();
             if(!$check){
-                $role = Role::create(['name'=>strtolower($request[$i])]);
-                $role;
+                $role = Role::create(['name'=> $request[0], 'shop_id' => $shopId ]);
+                return res_completed('Role Created');
             }else{
-                array_push($already_exists, $request[$i]);
+                return res_bad_request('Role exists');
+
             }
-        }
-        if(count($already_exists) > 0){
-            return res_success('already exists', $already_exists);
-        }
-        return res_completed('Role Created');
+        
     }
 
     public function delete_role($id)

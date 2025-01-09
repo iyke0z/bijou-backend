@@ -15,13 +15,15 @@ class ProductRepository implements ProductRepositoryInterface{
 
     public function create_category($request){
         $already_exists = [ ];
+        $shopId = request()->query('shop_id');
         for ($i=0; $i < count($request['category']) ; $i++) {
             $check = Category::where('name', strtolower($request['category'][$i]['name']))->first();
             if (!$check) {
                 // create category
                 Category::create([
                     'name' => strtolower($request['category'][$i]['name']),
-                    'has_stock' => $request['category'][$i]['has_stock']
+                    'has_stock' => $request['category'][$i]['has_stock'],
+                    "shop_id" => $shopId
                     ]
                 );
             }else{
@@ -54,6 +56,7 @@ class ProductRepository implements ProductRepositoryInterface{
 
     public function create_product($request){
         $already_exists = [];
+        $shopId = request()->query('shop_id');
         for ($i=0; $i < count($request['products']) ; $i++) {
             $check = Product::where('name', strtolower($request['products'][$i]['name']))
                     ->where('category_id', $request['products'][$i]['category_id'])
@@ -66,7 +69,8 @@ class ProductRepository implements ProductRepositoryInterface{
                     "category_id" => $request['products'][$i]["category_id"],
                     "stock" => $request['products'][$i]["stock"],
                     "price" => $request['products'][$i]["price"],
-                    "code" => $request['products'][$i]["code"]
+                    "code" => $request['products'][$i]["code"],
+                    "shop_id" => $shopId
                     ]
                 );
             }else{

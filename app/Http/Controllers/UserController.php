@@ -70,7 +70,8 @@ class UserController extends Controller
     }
 
     public function all_roles(){
-        return Role::with('priviledges')->get();
+        $shopId = request()->query('shop_id');
+        return applyShopFilter(Role::with('priviledges'), $shopId)->get();
     }
 
     public function all_priviledges(){
