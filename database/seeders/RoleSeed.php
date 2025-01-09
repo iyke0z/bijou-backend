@@ -18,7 +18,8 @@ class RoleSeed extends Seeder
 
         for ($i=0; $i < count($dat) ; $i++) {
             $name = [
-                "name" => $dat[$i]
+                "name" => $dat[$i],
+                'shop_id' => 1
             ];
             $roleExist = Role::where('name', $dat[$i])->first();
             if (!$roleExist) {
