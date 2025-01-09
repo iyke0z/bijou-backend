@@ -145,13 +145,14 @@ class ProductRepository implements ProductRepositoryInterface{
 
         for ($i=0; $i < count($request['purchase']); $i++) {
             $previous_stock = applyShopFilter(Product::where('id', $request['purchase'][$i]["product_id"]), $shopId)->first();
-            $purchase = applyShopFilter(PurchaseDetails::create([
+            $purchase = PurchaseDetails::create([
                 "purchase_id" => $new_order->id,
                 "product_id" => $request['purchase'][$i]["product_id"],
                 "previous_stock" => $previous_stock['stock'],
                 "qty"=>$request['purchase'][$i]['qty'],
-                "cost"=>$request['purchase'][$i]['cost']
-            ]), $shopId);
+                "cost"=>$request['purchase'][$i]['cost'],
+                "shop_id" => $shopId
+            ]);
             ProductTrait::log_purchase($purchase->id, 'purchase', $request['purchase'][$i]['qty'], $request['purchase'][$i]['cost'], $user, $shopId);
             array_push($totalPrice, $request['purchase'][$i]['qty']*$request['purchase'][$i]['cost']);
             $purchase;

@@ -79,16 +79,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
             $transaction->shop_id = $shopId;
             $transaction->save();
 
-            if ( $request['is_order'] == false && $request['payment_method'] != "on_credit" || $request['payment_method'] != 'part_payment_amount') {
-                bankService(
-                    $request['amount'], 
-                    "SALES", 
-                    $transaction->id,
-                    $shopId,
-                "CREDIT"
-
-                );
-            }
+           
             // create new sales order
 
             for ($i=0; $i < count($request['products']) ; $i++) {
@@ -125,6 +116,17 @@ class TransactionRepository implements TransactionRepositoryInterface{
                     $transaction->id,
                     $shopId,
                     "CREDIT"
+                );
+            }
+
+            if ( $request['is_order'] == false && $request['payment_method'] == "on_credit" || $request['payment_method'] != 'part_payment_amount') {
+                bankService(
+                    $request['amount'], 
+                    "SALES", 
+                    $transaction->id,
+                    $shopId,
+                "CREDIT"
+
                 );
             }
             

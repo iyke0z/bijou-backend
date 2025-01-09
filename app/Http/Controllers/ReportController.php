@@ -601,7 +601,7 @@ class ReportController extends Controller
         //   const netMargin = computed(() => (netProfit.value / turnover.value) * 100);
         $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
         $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
-        
+
         $validated = Validator::make($request->all(), [
             'start_date' => 'required',
             'end_date' => 'required'
@@ -731,8 +731,7 @@ class ReportController extends Controller
         $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
         $shopId = request()->query('shop_id');
 
-        $liquidity = applyShopFilter(Liquidity::where('shop_id', $shopId)
-                    ->whereBetween("created_at", [$start_date, $end_date]), $shopId)
+        $liquidity = applyShopFilter(Liquidity::whereBetween("created_at", [$start_date, $end_date]), $shopId)
                         ->get();
 
         return res_success('message', $liquidity);
