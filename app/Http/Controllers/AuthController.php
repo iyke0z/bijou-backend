@@ -97,6 +97,11 @@ class AuthController extends Controller
                                 $days = $response['data']['duration'];
                                 $business->expiry_date = strtotime("+$days days", time());
                                 $business->save();
+
+                                SubscriptionLog::create([
+                                    "package_id" => $response['data']['package_id'],
+                                    "business_id" => $business->id
+                                ]);
                                 return res_completed('activation successful');
                             }else{
                                 return res_unauthorized($response['message']);
