@@ -13,6 +13,7 @@ use App\Models\ActivationCodeLog;
 use App\Models\Banks;
 use App\Models\BusinessDetails;
 use App\Models\Package;
+use App\Models\SubscriptionLog;
 use App\Traits\AuthTrait;
 use App\Traits\BusinessTrait;
 use Carbon\Carbon;
@@ -178,16 +179,16 @@ class AuthController extends Controller
         return res_success('sucess', 'expired');
     } elseif ($days_left === 0) {
         // Subscription expires today
-        return res_success('sucess', 'expires_today');
+        return res_success('sucess', ['expires_today', SubscriptionLog::latest()->first()]);
     } elseif ($days_left === 1) {
         // Subscription expires tomorrow
-        return res_success('sucess', 'expires_tomorrow');
+        return res_success('sucess', ['expires_tomorrow', SubscriptionLog::latest()->first()]);
     } elseif ($days_left === 2) {
         // Subscription expires in two days
-        return res_success('sucess', 'expires_in_two_days');
+        return res_success('sucess', ['expires_in_two_days', SubscriptionLog::latest()->first()]);
     } else {
         // Subscription is active
-        return res_success('sucess', 'active');
+        return res_success('sucess', ['active', SubscriptionLog::latest()->first()]);
     }
     }
 }

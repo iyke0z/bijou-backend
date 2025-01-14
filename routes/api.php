@@ -44,7 +44,7 @@ Route::prefix('v1')->group(function (){
         Route::post('create/user', [UserController::class, 'create_user']);
     });
         // Auth
-    Route::post('sell/', [TransactionController::class, 'sell'])->middleware('IaActive');
+    Route::post('sell/', [TransactionController::class, 'sell'])->name('create_transactions')->middleware(['IaActive', 'CheckPackagePlan']);
     Route::post('sell/update', [TransactionController::class, 'update_sale'])->middleware('IaActive');
     Route::post('sell/orders', [TransactionController::class, "get_active_orders"])->middleware('IaActive');
     Route::post('sell/pay', [TransactionController::class, "pay"])->middleware('IaActive');
@@ -76,17 +76,18 @@ Route::prefix('v1')->group(function (){
         Route::get('/business/details', [AuthController::class, 'show_business']);
         Route::post('logout', [AuthController::class, 'logout']);
         Route::prefix('user')->middleware('checkPermission:can_manage_users')->group(function (){
-            Route::post('create', [UserController::class, 'create_user'])->middleware('IaActive');
+            Route::post('create', [UserController::class, 'create_user'])->name('create_user')->middleware(['IaActive', 'CheckPackagePlan']);
             Route::get('{id}', [UserController::class, 'get_user'])->middleware('IaActive');
             Route::post('update/{id}', [UserController::class, 'update_user'])->middleware('IaActive');
             Route::post('assign/{id}', [UserController::class, 'assign_user_priviledge'])->middleware('IaActive');
             Route::post('delete/{id}', [UserController::class,  'delete_user'])->middleware('IaActive');
             Route::get('/', [UserController::class,  'all_users']);
         });
+
         Route::middleware('checkPermission:can_manage_roles_priviledges')->group(function(){
             Route::get('roles',[UserController::class,'all_roles'])->middleware('IaActive');
             Route::get('priviledges',[UserController::class,'all_priviledges'])->middleware('IaActive');
-            Route::post('role/create',[UserController::class,'create_role'])->middleware('IaActive');
+            Route::post('role/create',[UserController::class,'create_role'])->name('create_roles')->middleware(['IaActive', 'CheckPackagePlan']);
             Route::post('role/delete/{id}',[UserController::class,'delete_role'])->middleware('IaActive');
             Route::post('priviledge/create',[UserController::class,'create_priviledge'])->middleware('IaActive');
             Route::post('priviledge/delete/{id}',[UserController::class,'delete_priviledge'])->middleware('IaActive');
@@ -95,13 +96,13 @@ Route::prefix('v1')->group(function (){
         });
        
         Route::prefix('category')->middleware('checkPermission:can_manage_categories')->group(function (){
-            Route::post('/create', [ProductController::class, 'create_category'])->middleware('IaActive');
+            Route::post('/create', [ProductController::class, 'create_category'])->name('create_categories')->middleware(['IaActive', 'CheckPackagePlan']);
             Route::post('/update/{id}', [ProductController::class, 'update_category'])->middleware('IaActive');
             Route::post('/delete/{id}', [ProductController::class, 'delete_category'])->middleware('IaActive');
             Route::get('/', [ProductController::class, 'all_categories']);
         });
         Route::prefix('product')->middleware('checkPermission:can_manage_products')->group(function (){
-            Route::post('/create', [ProductController::class, 'create_product'])->middleware('IaActive');
+            Route::post('/create', [ProductController::class, 'create_product'])->name('create_products')->middleware(['IaActive', 'CheckPackagePlan']);
             Route::patch('/update/{id}', [ProductController::class, 'update_product'])->middleware('IaActive');
             Route::post('/delete/{id}', [ProductController::class, 'delete_product'])->middleware('IaActive');
             Route::post('/report/{id}', [ProductController::class, 'generate_product_report'])->middleware('IaActive');
@@ -118,7 +119,7 @@ Route::prefix('v1')->group(function (){
             Route::put('/update-plan/{id}', [ProductController::class, 'updatePaymentPlan'])->middleware('IaActive');
         });
         Route::prefix('customer')->middleware('checkPermission:can_manage_customers')->group(function (){
-            Route::post('/create', [CustomerController::class, 'create_customer'])->middleware('IaActive');
+            Route::post('/create', [CustomerController::class, 'create_customer'])->name('create_customers')->middleware(['IaActive'. 'CheckPackagePlan']);
             Route::post('/update/{id}', [CustomerController::class, 'update_customer'])->middleware('IaActive');
             Route::post('/fund/{id}', [CustomerController::class, 'fund_customer'])->middleware('IaActive');
             Route::post('/delete/{id}', [CustomerController::class, 'delete_customer'])->middleware('IaActive');
@@ -157,7 +158,7 @@ Route::prefix('v1')->group(function (){
             Route::post('/type/update/{id}', [ExpenditureController::class, 'update_type'])->middleware('IaActive');
             Route::post('/type/delete/{id}', [ExpenditureController::class, 'delete_types'])->middleware('IaActive');
             Route::get('/type', [ExpenditureController::class, 'all_types']);
-            Route::post('/create', [ExpenditureController::class, 'new_expenditure'])->middleware('IaActive');
+            Route::post('/create', [ExpenditureController::class, 'new_expenditure'])->name('create_expenditures')->middleware(['IaActive', 'CheckPackagePlan']);
             Route::post('/update/{id}', [ExpenditureController::class, 'update_expenditure'])->middleware('IaActive');
             Route::post('/delete/{id}', [ExpenditureController::class, 'delete_expenditure'])->middleware('IaActive');
             Route::get('/', [ExpenditureController::class, 'all_expenditures']);
@@ -192,7 +193,7 @@ Route::prefix('v1')->group(function (){
         
         Route::prefix('shop')->middleware(['IaActive', 'checkPermission:can_manage_shops'])->group(function(){
             Route::get('all', [ShopController::class, 'index']);
-            Route::post('create', [ShopController::class, 'create']);
+            Route::post('create', [ShopController::class, 'create'])->name('create_branches')->middleware(['IaActive', 'CheckPackagePlan']);;
             Route::post('assign/{id}', [ShopController::class, 'assign']);
             Route::put('update/{id}', [ShopController::class, 'update']);
             Route::get('one/{id}', [ShopController::class, 'show']);
