@@ -19,7 +19,7 @@ class CheckPackagePlan
         $packageLimits = [
             1 => [  // Free Trial (7 days)
                 'users' => 2,
-                'branches' => 1,
+                'shops' => 1,
                 'roles' => 3,
                 'categories' => 2,
                 'products' => 10,
@@ -29,7 +29,7 @@ class CheckPackagePlan
             ],
             2 => [  // Starter (7 days, Monthly)
                 'users' => 5,
-                'branches' => 1,
+                'shops' => 1,
                 'roles' => 3,
                 'categories' => 3,
                 'products' => 300,
@@ -39,7 +39,7 @@ class CheckPackagePlan
             ],
             3 => [  // Professional (30 days, Monthly)
                 'users' => 10,
-                'branches' => 5,
+                'shops' => 5,
                 'roles' => 5,
                 'categories' => 15,
                 'products' => 500,
@@ -49,7 +49,7 @@ class CheckPackagePlan
             ],
             4 => [  // Enterprise (30 days, Monthly)
                 'users' => PHP_INT_MAX,  // Unlimited
-                'branches' => PHP_INT_MAX,
+                'shops' => PHP_INT_MAX,
                 'roles' => PHP_INT_MAX,
                 'categories' => PHP_INT_MAX,
                 'products' => PHP_INT_MAX,
@@ -59,7 +59,7 @@ class CheckPackagePlan
             ],
             5 => [  // Starter (Annual)
                 'users' => 5,
-                'branches' => 1,
+                'shops' => 1,
                 'roles' => 3,
                 'categories' => 3,
                 'products' => 300,
@@ -69,7 +69,7 @@ class CheckPackagePlan
             ],
             6 => [  // Professional (Annual)
                 'users' => 10,
-                'branches' => 5,
+                'shops' => 5,
                 'roles' => 5,
                 'categories' => 15,
                 'products' => 500,
@@ -79,7 +79,7 @@ class CheckPackagePlan
             ],
             7 => [  // Enterprise (Annual)
                 'users' => PHP_INT_MAX,  // Unlimited
-                'branches' => PHP_INT_MAX,
+                'shops' => PHP_INT_MAX,
                 'roles' => PHP_INT_MAX,
                 'categories' => PHP_INT_MAX,
                 'products' => PHP_INT_MAX,
@@ -89,13 +89,7 @@ class CheckPackagePlan
             ],
         ];
 
-        // If the package_id is not defined or invalid, deny access
-        if (!isset($packageLimits[$packageId])) {
-            return response()->json(['message' => 'subscription issue, contact support'], 403);
-        }
-
-        $limits = $packageLimits[$packageId];
-
+        $limits = $packageLimits[$packageId] ??  $packageLimits[1];
         // Get the current usage for specific entities based on the action being performed
         $currentUsage = [];
 
@@ -103,7 +97,7 @@ class CheckPackagePlan
         if (in_array($routeName, ['create_user', 'create_branches', 'create_roles', 'create_categories', 'create_products', 'create_transactions', 'create_expenditures', 'create_customers'])) {
             $currentUsage = [
                 'users' => \App\Models\User::count(),
-                'branches' => \App\Models\Shop::count(),
+                'shops' => \App\Models\Shop::count(),
                 'roles' => \App\Models\Role::count(),
                 'categories' => \App\Models\Category::count(),
                 'products' => \App\Models\Product::count(),
@@ -116,7 +110,7 @@ class CheckPackagePlan
         // Map the routes to their respective entities
         $resourceMap = [
             'create_user' => 'users',
-            'create_branches' => 'branches',
+            'create_branches' => 'shops',
             'create_roles' => 'roles',
             'create_categories' => 'categories',
             'create_products' => 'products',
