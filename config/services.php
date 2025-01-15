@@ -35,7 +35,7 @@ return [
     ],
     'webhooks' => [
         'paystack' => [
-            'secret' => "sk_live_dfb71646e6564dbe906e1e25b6d6b207b36c07f0"
+            'secret' => "sk_live_6bc28d738e8feb9af94e894a658fc915c867acb2"
         ]
     ]
 
