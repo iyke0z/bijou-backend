@@ -119,7 +119,7 @@ Route::prefix('v1')->group(function (){
             Route::put('/update-plan/{id}', [ProductController::class, 'updatePaymentPlan'])->middleware('IaActive');
         });
         Route::prefix('customer')->middleware('checkPermission:can_manage_customers')->group(function (){
-            Route::post('/create', [CustomerController::class, 'create_customer'])->name('create_customers')->middleware(['IaActive'. 'CheckPackagePlan']);
+            Route::post('/create', [CustomerController::class, 'create_customer'])->name('create_customers')->middleware(['IaActive', 'CheckPackagePlan']);
             Route::post('/update/{id}', [CustomerController::class, 'update_customer'])->middleware('IaActive');
             Route::post('/fund/{id}', [CustomerController::class, 'fund_customer'])->middleware('IaActive');
             Route::post('/delete/{id}', [CustomerController::class, 'delete_customer'])->middleware('IaActive');
