@@ -33,6 +33,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 Route::post('/webhook', [WebHookController::class, 'webHookHandler']);
+Route::post('/sales-performance', [ReportController::class, 'getSalesPerformance']);
 
 Route::prefix('v1')->group(function (){
     Route::prefix('admin')->group(function () {
