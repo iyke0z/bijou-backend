@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Expenditure;
 use App\Models\ExpenditureType;
+use App\Models\Liquidity;
 use App\Models\PurchaseDetails;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -70,7 +71,7 @@ class ExpenditureController extends Controller
         ]);
         
         if($validated){
-            Expenditure::create([
+            $new_expenditure = Expenditure::create([
                 'expenditure_type_id' => $request['expenditure_type_id'],
                 'amount' => $request['amount'],
                 'qty' => $request['qty'],
@@ -78,26 +79,42 @@ class ExpenditureController extends Controller
                 'shop_id' => $shopId
 
             ]);
+            bankService(
+                $request['amount'], 
+                "EXPENDITURE - PAID",
+                $new_expenditure->id,
+                $shopId,
+                "DEBIT"
+            );
             return res_completed('created');
         }
     }
 
     public function update_expenditure(Request $request, $id){
         $find = Expenditure::find($id);
+        $shopId = request()->query('shop_id');
+
         
         if($find){
             $validated = Validator::make($request->all(), [
                 'expenditure_type_id' => 'required',
                 'amount' => 'required',
                 'qty' => $request['qty'],
-
             ]);
+            
             if($validated){
                 $find->update([
                     'expenditure_type_id' => $request['expenditure_type_id'],
                     'amount' => $request['amount'],
                     'user_id' => Auth::user()->id,
                 ]);
+
+                //update bank balance
+                $bankBalance = Liquidity::where('transaction_reference', $id)->first();
+                $bankBalance->transaction_amount =  $request['amount'];
+                $bankBalance->save();
+                
+                
                 return res_completed('update');
             }
         }
