@@ -14,7 +14,7 @@ class AddToRepositoryExpTypes extends Migration
     public function up()
     {
         Schema::table('expenditure_types', function (Blueprint $table) {
-            $table->enum('expenditure_type', ['cogs', 'opex'])->default('opex');
+            $table->string('expenditure_type')->default('opex');
         });
     }
 

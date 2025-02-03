@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Package;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class SuperAdminController extends Controller
@@ -19,6 +20,11 @@ class SuperAdminController extends Controller
         ]);
 
         return res_completed('completed');
+    }
+    public function userCount(){
+        return response()->json(
+            User::count()
+        );
     }
     public function updatePackage(Request $request, $id){
         $package = Package::where('id', $id)->first();

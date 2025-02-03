@@ -16,47 +16,15 @@ class Users extends Seeder
     public function run()
     {
         $dat =  [
-                    ["fullname"  => 'Muktar',
-                    "email" => 'mk@gmail.com',
+                    ["fullname"  => 'Ikenna',
+                    "email" => 'eddyiyke3@gmail.com',
                     "phone" => '+2348147082856',
                     "address" => 'abuja,nigeria',
                     "role_id" => '1',
+                    "shop_id"=>'1',
                     "password"=>Hash::make('mk2323'),
                     "gender"=>'male',
                     "dob"=>'1997-13-08'],
-
-                    ["fullname"  => 'Waiter 1',
-                    "email" => 'w1@gmail.com',
-                    "phone" => '+1234567',
-                    "address" => 'abuja,nigeria',
-                    "role_id" => '1',
-                    "password"=>Hash::make('mk2323'),
-                    "gender"=>'male',
-                    "dob"=>'1997-13-08'],
-                    ["fullname"  => 'Waiter 2',
-                    "email" => 'w2@gmail.com',
-                    "phone" => '+12345678',
-                    "address" => 'abuja,nigeria',
-                    "role_id" => '1',
-                    "password"=>Hash::make('mk2323'),
-                    "gender"=>'male',
-                    "dob"=>'1997-13-08'],
-                    ["fullname"  => 'Waiter 3',
-                    "email" => 'w3@gmail.com',
-                    "phone" => '+123456789',
-                    "address" => 'abuja,nigeria',
-                    "role_id" => '1',
-                    "password"=>Hash::make('mk2323'),
-                    "gender"=>'male',
-                    "dob"=>'1997-13-08'],
-                    ["fullname"  => 'Waiter 4',
-                    "email" => 'w4@gmail.com',
-                    "phone" => '+1234567890',
-                    "address" => 'abuja,nigeria',
-                    "role_id" => '1',
-                    "password"=>Hash::make('mk2323'),
-                    "gender"=>'male',
-                    "dob"=>'1997-13-08']
                 ];
 
                 for ($i=0; $i < count($dat) ; $i++) {
@@ -66,6 +34,7 @@ class Users extends Seeder
                     "phone" => $dat[$i]['phone'],
                     "address" =>$dat[$i]['address'],
                     "role_id" => $dat[$i]['role_id'],
+                    "shop_id"=>$dat[$i]['shop_id'],
                     "password"=>$dat[$i]['password'],
                     "gender"=>$dat[$i]['gender'],
                     "dob"=>$dat[$i]['dob']

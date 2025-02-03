@@ -36,6 +36,9 @@ Route::post('/webhook', [WebHookController::class, 'webHookHandler']);
 Route::post('/sales-performance', [ReportController::class, 'getSalesPerformance']);
 
 Route::prefix('v1')->group(function (){
+    Route::get('/business/details', [AuthController::class, 'show_business']);
+    Route::get('/user-count', [SuperAdminController::class, 'userCount']);
+
     Route::prefix('admin')->group(function () {
         Route::get('packages/', [SuperAdminController::class, 'getPackages']);
         Route::post('create-package', [SuperAdminController::class, 'createPackage']);
@@ -44,6 +47,7 @@ Route::prefix('v1')->group(function (){
         Route::post('business/create', [AuthController::class, 'create_business_details']);
         Route::post('create/user', [UserController::class, 'create_user']);
     });
+
         // Auth
     Route::post('sell/', [TransactionController::class, 'sell'])->name('create_transactions')->middleware(['IaActive', 'CheckPackagePlan']);
     Route::post('sell/update', [TransactionController::class, 'update_sale'])->middleware('IaActive');
@@ -58,6 +62,7 @@ Route::prefix('v1')->group(function (){
     Route::post('login', [AuthController::class, 'login'])->name('login');
     Route::post('/business/create', [AuthController::class, 'create_business_details'])->middleware('IaActive');
     
+
     Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', function (Request $request) {
             $user = User::with('role')
@@ -74,7 +79,6 @@ Route::prefix('v1')->group(function (){
         Route::get('customer/all', [CustomerController::class, 'all_customers']);
         Route::get('product/', [ProductController::class, 'all_products']);
 
-        Route::get('/business/details', [AuthController::class, 'show_business']);
         Route::post('logout', [AuthController::class, 'logout']);
         Route::prefix('user')->middleware('checkPermission:can_manage_users')->group(function (){
             Route::post('create', [UserController::class, 'create_user'])->name('create_user')->middleware(['IaActive', 'CheckPackagePlan']);
