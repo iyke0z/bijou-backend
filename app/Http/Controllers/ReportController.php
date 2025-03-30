@@ -620,7 +620,7 @@ class ReportController extends Controller
                     $query->where('expenditure_type', 'opex'); // Assuming 'name' is a column in the expenditure_type table
                 }), $shopId)->sum('amount');
         
-        $assets = applyShopFilter(Expenditure::with('type')->whereBetween('created_at', [$start_date, $end_date])->whereHas('type', function ($query) {
+        $assets = applyShopFilter(Expenditure::with('type')->whereHas('type', function ($query) {
             $query->where('expenditure_type', 'capex');}), $shopId)->get();
 
         $annual_depreciation = 0;

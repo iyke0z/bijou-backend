@@ -262,3 +262,15 @@ jobs:
             cd /home/ngmktsit/www/business_sites/24hrs/api  # Navigate to the second folder
             php artisan migrate
             php artisan clean
+
+      - name: Run PHP Artisan Command on jtsforte/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/business_sites/jtsforte/api  # Navigate to the second folder
+            php artisan migrate
+            php artisan clean
