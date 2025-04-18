@@ -28,7 +28,8 @@ class CreateCustomerRequest extends FormRequest
             "address"=>"required",
             "phone"=>"required",
             "email"=>"nullable|email",
-            "wallet_balance"=>"required"
+            "wallet_balance"=>"required",
+            "customer_type" => "required"
         ];
     }
 }

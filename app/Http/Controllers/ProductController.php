@@ -16,9 +16,12 @@ use App\Models\ProductImages;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseDetails;
+use App\Models\PurchaseSupportingDocument;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use ZipArchive;
 
 class ProductController extends Controller
 {
@@ -69,7 +72,7 @@ class ProductController extends Controller
 
         $report = applyShopFilter(Product::with('category')->with(
             ['sales' => function($q) {
-                $q->select('sales.*','users.fullname')->join('users', 'sales.user_id', 'users.id');
+                $q->select('sales.*','users.fullname')->join('users', 'sales.user_id', 'users.id')->withTrashed();
             }]
             )->with(
                 ['purchases' => function($q) {
@@ -77,7 +80,7 @@ class ProductController extends Controller
                         ->join('purchases', 'purchase_details.purchase_id', 'purchases.id')
                         ->join('users', 'purchases.user_id', 'users.id');
                 }]
-            ), $shopId)->find($id);
+            )->with('transferHistory'), $shopId)->find($id);
         return res_success('report', $report);
     }
 
@@ -167,9 +170,25 @@ class ProductController extends Controller
     public function all_purchases(Request $request){
         $shopId = $request->query('shop_id');
 
-        $all =  applyShopFilter(Purchase::with('user')->with(['purchase_detail' => function($q) {
+        $all =  applyShopFilter(Purchase::with('user')->with('documents')->with(['purchase_detail' => function($q) {
                     $q->with('product');
                 }]), $shopId)->get();
+        
+        foreach ($all as $purchase) {
+            $purchase_detail = PurchaseDetails::where('purchase_id', $purchase->id)->get();
+            $totalBalance = 0;
+            foreach ($purchase_detail as $detail) {
+                if (in_array($detail->payment_method, ['part_payment', 'on_credit']) || $detail->payment_status == 'not_paid') {
+                    $purchase->purchase_detail = $detail;
+                    $balance = $detail->cost * $detail->qty - $detail->part_payment_amount;
+                    $totalBalance += $balance;
+                    $purchase['total_balance'] = $totalBalance;
+                }else{
+                    $purchase['total_balance'] += $detail->cost * $detail->qty;
+                }
+            }
+
+        }
         return res_success('all purchases', $all);
     }
 
@@ -183,6 +202,88 @@ class ProductController extends Controller
         }]), $shopId)
         ->get();
         return res_success('purchase report', $all);
+    }
+
+    public function uploadDocument(Request $request)
+    {
+        $request->validate([
+            'document_type' => 'required|string',
+            'purchase_id' => 'required|integer|exists:purchases,id',
+            'files.*' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
+        ]);
+        
+
+        $documents = [];
+
+        foreach ($request->file('files') as $file) {
+            $path = $file->store('purchase_documents');
+        
+            $documents[] = PurchaseSupportingDocument::create([
+                'document_type' => $request->document_type,
+                'path' => $path,
+                'purchase_id' => $request->purchase_id,
+            ]);
+        }
+        
+        return response()->json([
+            'message' => 'Documents uploaded successfully.',
+            'documents' => $documents,
+        ], 201);
+        
+    }
+
+    public function deleteDocument(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|integer|exists:purchase_supporting_documents,id',
+        ]);
+
+        $document = PurchaseSupportingDocument::findOrFail($request->id);
+
+        // Delete the file from storage
+        Storage::delete($document->path);
+
+        // Soft delete the DB record
+        $document->delete();
+
+        return response()->json([
+            'message' => 'Document deleted successfully.',
+        ]);
+    }
+    public function downloadDocuments($id)
+    {
+        $documents = PurchaseSupportingDocument::where('purchase_id', $id)->get();
+    
+        if ($documents->isEmpty()) {
+            return response()->json(['error' => 'No documents found.'], 404);
+        }
+    
+        // Create a temporary ZIP file
+        $zipFileName = 'purchase_documents_' . $id . '.zip';
+        $zipPath = storage_path('app/tmp/' . $zipFileName);
+    
+        // Ensure the tmp directory exists
+        if (!file_exists(storage_path('app/tmp'))) {
+            mkdir(storage_path('app/tmp'), 0777, true);
+        }
+    
+        $zip = new ZipArchive;
+        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
+            foreach ($documents->groupBy('document_type') as $type => $groupedDocs) {
+                foreach ($groupedDocs as $doc) {
+                    if (Storage::exists($doc->path)) {
+                        // Add file to ZIP with folder structure by document_type
+                        $relativePath = "$type/" . basename($doc->path);
+                        $zip->addFile(storage_path('app/' . $doc->path), $relativePath);
+                    }
+                }
+            }
+            $zip->close();
+        } else {
+            return response()->json(['error' => 'Failed to create ZIP file.'], 500);
+        }
+    
+        return response()->download($zipPath)->deleteFileAfterSend(true);
     }
 
 

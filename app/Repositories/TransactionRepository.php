@@ -6,8 +6,10 @@ use App\Interfaces\TransactionRepositoryInterface;
 use App\Models\Customer;
 use App\Models\CustomerDiscount;
 use App\Models\Discount;
+use App\Models\LogisticsAccount;
 use App\Models\Product;
-use App\Models\Sales;
+use App\Models\Sale;
+use App\Models\SalesOrder;
 use App\Models\SplitPayments;
 use App\Models\Transaction;
 use App\Models\WaiterCode;
@@ -25,7 +27,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
 
     public function drinks_prep_status(){
         $shopId = request()->query('shop_id');
-        $drinks = applyShopFilter(Sales::with(['product' => function($q){
+        $drinks = applyShopFilter(Sale::with(['product' => function($q){
             $q->where('category_id',"!=", 1)->where('category_id', "!=", 2);
         }])->with(['transaction' => function($q) {
             $q->where('status', "!=", "cancelled");
@@ -39,7 +41,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
     public function food_prep_status(){
         $shopId = request()->query('shop_id');
 
-        $food = applyShopFilter(Sales::with(['product' => function($q){
+        $food = applyShopFilter(Sale::with(['product' => function($q){
                     $q->where('category_id', 1);
                 }])->with(['transaction' => function($q) {
                     $q->where('status', "!=", "cancelled");
@@ -48,7 +50,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
         return res_success('food', $food);
     }
     public function update_prep_status($request){
-        $sales = Sales::find($request['id']);
+        $sales = Sale::find($request['id']);
 
         if($sales->exists()){
             $sales->update([
@@ -77,26 +79,54 @@ class TransactionRepository implements TransactionRepositoryInterface{
             $transaction->table_description = $request['description'];
             $transaction->customer_id = $request['customer_id'] ?? $request['customer_id'];
             $transaction->shop_id = $shopId;
+            $transaction->discount = $request['discount'];
+            $transaction->vat = $request['vat'];
             $transaction->save();
+
+            // if logistics is greater than 0, transfer to logistics account
+            if($request['logistics'] > 0){
+                $previous_balance = LogisticsAccount::get()->last()->current_balancee;
+                $current_balance = $previous_balance + intval($request['logistics']);
+                LogisticsAccount::create([
+                    "transaction_id" => $transaction->id,
+                    "amount" => $request['logistics'],
+                    "type" => 'credit',
+                    'shop_id' => $shopId,
+                    "previous_balance" => $previous_balance ?? 0,
+                    "current_balance" => $current_balance
+                ]);
+            }
 
            
             // create new sales order
-
             for ($i=0; $i < count($request['products']) ; $i++) {
                 $product = applyShopFilter(Product::with('category')->where('id',$request['products'][$i]["product_id"]),$shopId)->first();
                 if($product->category->has_stock == 1){
                     $product->stock = $product->stock - $request['products'][$i]["qty"];
                     $product->save();
                 }
-
-                $sale = new Sales();
+                // get the difference between current_stock, and after_sale stock
+                $stock = Product::find($request["products"][$i]["product_id"])->stock - $request['products'][$i]['qty'];
+                // if the product stock left is a negative value, 
+                $sale = new Sale();
                 $sale->product_id = $request['products'][$i]["product_id"];
                 $sale->ref = $transaction->id;
                 $sale->price = $request['products'][$i]["price"];
                 $sale->qty = $request['products'][$i]["qty"];
                 $sale->user_id = $auth->user_id;
+                if($stock > 0){
+                    $sale->is_negative_sale = False;
+                }else{
+                    $sale->is_negative_sale = True;
+                    // this is the number of items needed after stock negative values stores the requested quantity
+                    $sale->no_of_items = abs(Product::find($request["products"][$i]["product_id"])->stock) - $request['products'][$i]['qty'];
+                }
                 $sale->shop_id = $shopId;
+                
                 $sale->save();
+
+                // // sales order creation
+    
             }
 
             if($request['payment_method'] == "wallet" || $request['payment_method'] == 'on_credit'){
@@ -125,7 +155,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
                     "SALES", 
                     $transaction->id,
                     $shopId,
-                "CREDIT"
+                    "CREDIT"
 
                 );
             }
@@ -141,7 +171,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
 
         if($auth->exists()){
             // delete
-            $sales = Sales::where('ref', $request['ref'])->get();
+            $sales = Sale::where('ref', $request['ref'])->get();
             foreach ($sales as $sale) {
                 // return qty to Product
                 $product = Product::where('id', $sale["product_id"])->first();
@@ -161,7 +191,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
                     $product->save();
                 }
 
-                $sale = Sales::where("ref", $request['ref'])->where("product_id", $request['products'][$i]["product_id"])->first();
+                $sale = Sale::where("ref", $request['ref'])->where("product_id", $request['products'][$i]["product_id"])->first();
                 if($sale) {
                     $sale->product_id = $request['products'][$i]["product_id"];
                     $sale->ref = $request['ref'];
@@ -170,7 +200,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
                     $sale->user_id = $auth->user_id;
                     $sale->save();
                 }else{
-                    $sale = new Sales();
+                    $sale = new Sale();
                     $sale->product_id = $request['products'][$i]["product_id"];
                     $sale->ref = $request['ref'];
                     $sale->price = $request['products'][$i]["price"];
@@ -237,7 +267,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
 
         //if($auth->exists()){//
             // delete
-            $sales = Sales::where('ref', $request['ref'])->get();
+            $sales = Sale::where('ref', $request['ref'])->get();
             foreach ($sales as $sale) {
                 // return qty to Product
                 $product = Product::where('id', $sale["product_id"])->first();
@@ -245,7 +275,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
                     $product->stock = $product->stock + $sale["qty"];
                     $product->save();
                 }
-
+                $sale->deleted_by = Auth::user()->id;
                 $sale->delete();
             }
 

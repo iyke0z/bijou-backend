@@ -43,7 +43,10 @@ class CreateSalesRequest extends FormRequest
             'amount' => 'sometimes',
             'payment_method' => 'sometimes',
             'customer_id' => 'sometimes',
-            'part_payment_amount' => 'sometimes'
+            'part_payment_amount' => 'sometimes',
+            'discount' => 'sometimes',
+            'vat' => 'sometimes',
+            'logistics' => 'sometimes'
         ];
     }
 }

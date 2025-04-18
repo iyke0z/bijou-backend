@@ -33,8 +33,8 @@ class UpdateBusinessDetailsRequest extends FormRequest
             "vat" => "required",
             "status"=>"sometimes",
             "expiry_date"=>'sometimes',
-            "opening_time" => "sometimes",
-            "closing_time" => "sometimes",
+            "times" => "sometimes",
+            "is_negative_stock" => "sometimes",
         ];
     }
 }

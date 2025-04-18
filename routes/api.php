@@ -1,10 +1,15 @@
 <?php
 
+use App\Http\Controllers\GoodDeliverNoteController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BackendController;
+use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ExpenditureController;
+use App\Http\Controllers\IotTestController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SalesOrderController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\TransactionController;
@@ -32,6 +37,7 @@ use App\Models\User;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
 Route::post('/webhook', [WebHookController::class, 'webHookHandler']);
 Route::post('/sales-performance', [ReportController::class, 'getSalesPerformance']);
 
@@ -122,6 +128,11 @@ Route::prefix('v1')->group(function (){
             Route::get('/', [ProductController::class, 'all_purchases'])->middleware('IaActive');
             Route::post('/report', [ProductController::class, 'purchase_report'])->middleware('IaActive');
             Route::put('/update-plan/{id}', [ProductController::class, 'updatePaymentPlan'])->middleware('IaActive');
+            Route::prefix('documents')->group(function () {
+                Route::post('/upload', [ProductController::class, 'uploadDocument']);
+                Route::delete('/delete/{id}', [ProductController::class, 'deleteDocument']);
+                Route::get('/download/{purchase_id}', [ProductController::class, 'downloadDocuments']);
+            });
         });
         Route::prefix('customer')->middleware('checkPermission:can_manage_customers')->group(function (){
             Route::post('/create', [CustomerController::class, 'create_customer'])->name('create_customers')->middleware(['IaActive', 'CheckPackagePlan']);
@@ -169,6 +180,17 @@ Route::prefix('v1')->group(function (){
             Route::get('/', [ExpenditureController::class, 'all_expenditures']);
             Route::post('/report', [ExpenditureController::class, 'report'])->middleware('IaActive');
             Route::put('/update-plan/{id}', [ExpenditureController::class, 'updateExpenditurPaymentPlan'])->middleware('IaActive');            
+            Route::prefix('documents')->group(function () {
+                Route::post('/upload', [ExpenditureController::class, 'uploadDocument']);
+                Route::delete('/delete/{id}', [ExpenditureController::class, 'deleteDocument']);
+                Route::get('/download/{purchase_id}', [ExpenditureController::class, 'downloadDocuments']);
+            });
+        });
+        Route::prefix('budget')->middleware('checkPermission:can_manage_budget')->group(function (){
+            Route::post('/create-budget', [BudgetController::class, 'storeBulk'])->middleware('IaActive');
+            Route::delete('/delete-budget/{id}', [BudgetController::class, 'destroy'])->middleware('IaActive');
+            Route::get('/show-budget', [BudgetController::class, 'showPeriodically'])->middleware('IaActive');
+            Route::post('/update-budget/{id}', [BudgetController::class, 'update'])->middleware('IaActive');
         });
 
         Route::prefix('report')->middleware('checkPermission:can_view_reports')->group(function (){
@@ -182,7 +204,19 @@ Route::prefix('v1')->group(function (){
             Route::post('/profit-loss', [ReportController::class, 'getProfitLoss'])->middleware('IaActive');
             Route::get('/bank-balance', [ReportController::class, 'getBankAccountBalance'])->middleware('IaActive');
             Route::post('/bank-statement', [ReportController::class, 'getBankStatement'])->middleware('IaActive');
+            Route::post('/logistics-statement', [ReportController::class, 'getLogisticsStatement'])->middleware('IaActive');
             Route::post('/payables', [ReportController::class, 'getPayables'])->middleware('IaActive');
+            Route::post('/download', [ReportController::class, 'downloadReport'])->middleware('IaActive');
+        });
+
+        Route::prefix('backend')->middleware('checkPermission:can_manage_backend')->group(function (){
+            Route::post('sales', [BackendController::class,'sales'])->name('sales');
+            Route::get('purchases', [BackendController::class,'purchases'])->name('purchases');
+            Route::get('products', [BackendController::class,'products'])->name('products');
+            Route::get('expenditure', [BackendController::class,'expenditure'])->name('expenditure');
+            Route::get('staff', [BackendController::class,'staff'])->name('staff');
+            Route::get('customer', [BackendController::class,'customer'])->name('customer');
+
         });
 
         Route::prefix('banks')->middleware('checkPermission:can_manage_banks')->group(function (){
@@ -203,7 +237,22 @@ Route::prefix('v1')->group(function (){
             Route::put('update/{id}', [ShopController::class, 'update']);
             Route::get('one/{id}', [ShopController::class, 'show']);
             Route::delete('delete/{id}', [ShopController::class, 'delete']);
+            Route::post('initiate-transfer', [ShopController::class,'transferProduct']);
+            Route::post('approve-transfer/{id}', [ShopController::class,'approveTransfer']);
+            Route::post('reject-transfer/{id}', [ShopController::class,'rejectTransfer']);
+            Route::get('recent-transfers/{shopId}', [ShopController::class,'recentTransfers']);
         });
+
+        Route::prefix('goods_delivery_notes')->group(function () {
+            Route::get('/', [GoodDeliverNoteController::class, 'index'])->name('goods_delivery_notes.index');
+            Route::post('/', [GoodDeliverNoteController::class, 'store'])->name('goods_delivery_notes.store');
+            Route::get('/{goodsDeliveryNote}', [GoodDeliverNoteController::class, 'show'])->name('goods_delivery_notes.show');
+            Route::put('/{goodsDeliveryNote}', [GoodDeliverNoteController::class, 'update'])->name('goods_delivery_notes.update');
+            Route::get('/{goodsDeliveryNote}/download', [GoodDeliverNoteController::class, 'download'])->name('goods_delivery_notes.download');
+        });
+
+
+        
     });
 });
 

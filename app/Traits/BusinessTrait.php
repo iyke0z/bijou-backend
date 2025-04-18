@@ -2,6 +2,7 @@
 namespace App\Traits;
 
 use App\Models\BusinessDetails;
+use App\Models\BusinessTime;
 
 trait BusinessTrait{
     public static function get_vat(){
@@ -10,6 +11,7 @@ trait BusinessTrait{
     }
     public static function get_details(){
         $details = BusinessDetails::with('activation')->first();
+        $details['times'] = BusinessTime::first();
         return $details;
     }
 

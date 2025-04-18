@@ -15,6 +15,7 @@ class CustomerRepository implements CustomerRepositoryInterface{
             "fullname"=>$request["fullname"],
             "address"=>$request["address"],
             "phone"=>$request["phone"],
+            "customer_type"=>$request["customer_type"],
             "email"=>$request["email"],
             "wallet_balance"=>$request["wallet_balance"]
         ]);
@@ -35,6 +36,7 @@ class CustomerRepository implements CustomerRepositoryInterface{
                 "fullname"=>$request["fullname"],
                 "address"=>$request["address"],
                 "phone"=>$request["phone"],
+                "customer_type"=>$request["customer_type"],
                 "email"=>$request["email"],
             ]);
             return res_completed('Account updated');

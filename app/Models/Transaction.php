@@ -15,8 +15,11 @@ class Transaction extends Model
         return $this->belongsTo(Customer::class, 'customer_id');
     }
 
+    public function deliveryNote(){
+        return $this->hasOne(GoodsDeliveryNote::class,'transaction_id');
+    }
     public function sales(){
-        return $this->hasMany(Sales::class, 'ref');
+        return $this->hasMany(Sale::class, 'ref');
     }
 
     public function user(){
@@ -29,6 +32,10 @@ class Transaction extends Model
 
     public function split(){
         return $this->hasMany(SplitPayments::class, 'transaction_id');
+    }
+
+    public function logistics(){
+        return $this->hasMany(LogisticsAccount::class,'transaction_id');
     }
 
 }

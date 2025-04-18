@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use App\Interfaces\TransactionRepositoryInterface;
 use App\Models\Customer;
 use App\Models\Discount;
+use App\Models\Sale;
 use App\Models\Sales;
 use App\Models\Transaction;
 use App\Models\WaiterCode;
@@ -44,6 +45,7 @@ class TransactionController extends Controller
         }
     public function delete_sale(CancelOrderRequest $request){
         $validated = $request->validated();
+        
         return $this->transRepo->delete_sale($validated);
     }
 
@@ -58,13 +60,13 @@ class TransactionController extends Controller
     }
 
     public function all_sales(){
-        $sales = Sales::with('product')->with('discount')->with('user')->get();
+        $sales = Sale::with('product')->with('discount')->with('user')->get();
         return res_success('all sales', $sales);
     }
 
     public function periodic_sales(PeriodicSalesRequest $request){
         if($request['platform'] == 'all'){
-            $sales = Sales::join('transactions', 'sales.ref', 'transactions.id')
+            $sales = Sale::join('transactions', 'sales.ref', 'transactions.id')
                         ->whereBetween(DB::raw('DATE(sales.`created_at`)'), [$request['start_date'], $request['end_date']])->with('product')
                         ->with('discount')
                         ->with('user')
@@ -72,7 +74,7 @@ class TransactionController extends Controller
 
             return res_success('all sales', $sales);
         }else{
-            $sales = Sales::join('transactions', 'sales.ref', 'transactions.id')
+            $sales = Sale::join('transactions', 'sales.ref', 'transactions.id')
                         ->whereBetween(DB::raw('DATE(sales.`created_at`)'), [$request['start_date'], $request['end_date']])->with('product')
                         ->where('transactions.platform', $request['platform'])
                         ->with('discount')

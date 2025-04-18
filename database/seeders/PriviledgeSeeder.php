@@ -29,7 +29,9 @@ class PriviledgeSeeder extends Seeder
             "can_manage_shops",
             "can_manage_payroll",
             "can_manage_vendors",
-            "can_see_liquidity"
+            "can_see_liquidity",
+            "can_manage_backend",
+            "can_manage_budget",
     ];
 
         for ($i=0; $i < count($dat) ; $i++) {

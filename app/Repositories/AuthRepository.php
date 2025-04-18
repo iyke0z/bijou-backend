@@ -100,15 +100,15 @@ class AuthRepository implements AuthRepositoryInterface{
             "motto" => $request["motto"],
             "vat" => $request["vat"],
             "status"=>$request["status"],
-            "expiry_date" => $request['expiry_date']
+            "expiry_date" => $request['expiry_date'],
+            "is_negative_stock" => $request['is_negative_stock']
         ]);
-
-        if (isset($request['opening_time']) && isset($request['closing_time'])) {
+        if (isset($request['times']['start_time']) && isset($request['times']['closing_time'])) {
+            
             $businesstime = BusinessTime::first();
             $businesstime->update([
-                'opening_time' => $request['opening_time'],
-                'closing_time' => $request['closing_time'],
-                'shop_id' => $request->query('shop_id')
+                'start_time' => $request['times']['start_time'],
+                'closing_time' => $request['times']['closing_time'],
             ]);
         }
 

@@ -22,7 +22,7 @@ class Product extends Model
     }
 
     public function sales(){
-        return $this->hasMany(Sales::class, 'product_id');
+        return $this->hasMany(Sale::class, 'product_id');
     }
 
     public function product_log(){
@@ -31,6 +31,10 @@ class Product extends Model
 
     public function images(){
         return $this->hasMany(ProductImages::class, 'product_id');
+    }
+
+    public function transferHistory(){
+        return $this->hasMany(StrockTransaction::class, 'product_id');
     }
 }
 

@@ -17,6 +17,10 @@ class Purchase extends Model
     public function purchase_detail(){
         return $this->hasMany(PurchaseDetails::class);;
     }
+    public function documents(){
+        return $this->hasMany(PurchaseSupportingDocument::class, 'purchase_id');
+    }
+
 
 
 }

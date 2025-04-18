@@ -44,7 +44,15 @@ class RolesPriviledge extends Seeder
             ['role_id' => 1,
             'priviledge_id' => 13],
             ['role_id' => 1,
-            'priviledge_id' => 14]
+            'priviledge_id' => 14],
+            ['role_id' => 1,
+            'priviledge_id' => 15],
+            ['role_id' => 1,
+            'priviledge_id' => 16
+        ],
+        ['role_id' => 1,
+            'priviledge_id' => 17
+            ]
         ];
 
         foreach ($dat as $key => $value) {

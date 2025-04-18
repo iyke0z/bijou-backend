@@ -3,13 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\Expenditure;
+use App\Models\ExpenditureSupportingDocuments;
 use App\Models\ExpenditureType;
 use App\Models\Liquidity;
-use App\Models\PurchaseDetails;
+use App\Models\ExpenditureDetails;
+use App\Models\ExpenditureSupportingDocument;
+use App\Models\LogisticsAccount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use ZipArchive;
 
 class ExpenditureController extends Controller
 {
@@ -77,15 +82,32 @@ class ExpenditureController extends Controller
                 'qty' => $request['qty'],
                 'user_id' => Auth::user()->id,
                 'shop_id' => $shopId
-
             ]);
-            bankService(
-                $request['amount'], 
-                "EXPENDITURE - PAID",
-                $new_expenditure->id,
-                $shopId,
-                "DEBIT"
-            );
+
+            // if expenditure is logistics deduct from logistics account
+            $expenditure = ExpenditureType::findOrFail($request['expenditure_type_id']);
+            if($expenditure->name == "logistics" || $expenditure->name == "Logistics"){
+                $previous_balance = LogisticsAccount::get()->last()->current_balance ?? 0;
+                $current_balance = $previous_balance - intval($request['amount']);
+                LogisticsAccount::create([
+                    "transaction_id" => $expenditure->id,
+                    "amount" => $request['amount'],
+                    "type" => 'debit',
+                    'shop_id' => $shopId,
+                    "previous_balance" => $previous_balance ?? 0,
+                    "current_balance" => $current_balance
+                ]);
+            }else{
+                bankService(
+                    $request['amount'], 
+                    "EXPENDITURE - PAID",
+                    $new_expenditure->id,
+                    $shopId,
+                    "DEBIT"
+                );
+            }
+
+            // if expenditure is logistics
             return res_completed('created');
         }
     }
@@ -124,7 +146,7 @@ class ExpenditureController extends Controller
     public function all_expenditures(Request $request){
         $shopId = $request->query('shop_id');
 
-        return res_success('all', applyShopFilter(Expenditure::with('type')->with('user'), $shopId)->get());
+        return res_success('all', applyShopFilter(Expenditure::with('type')->with('documents')->with('user'), $shopId)->get());
     }
 
     public function delete_expenditure($id){
@@ -191,4 +213,87 @@ class ExpenditureController extends Controller
         return res_completed('updated');
 
     }
+    public function uploadDocument(Request $request)
+    {
+        $request->validate([
+            'document_type' => 'required|string',
+            'expenditure_id' => 'required|integer|exists:expenditures,id',
+            'files.*' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
+        ]);
+        
+
+        $documents = [];
+
+        foreach ($request->file('files') as $file) {
+            $path = $file->store('expenditure_documents');
+        
+            $documents[] = ExpenditureSupportingDocument::create([
+                'document_type' => $request->document_type,
+                'path' => $path,
+                'expenditure_id' => $request->expenditure_id,
+            ]);
+        }
+        
+        return response()->json([
+            'message' => 'Documents uploaded successfully.',
+            'documents' => $documents,
+        ], 201);
+        
+    }
+
+    public function deleteDocument(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|integer|exists:expenditure_supporting_documents,id',
+        ]);
+
+        $document = ExpenditureSupportingDocument::findOrFail($request->id);
+
+        // Delete the file from storage
+        Storage::delete($document->path);
+
+        // Soft delete the DB record
+        $document->delete();
+
+        return response()->json([
+            'message' => 'Document deleted successfully.',
+        ]);
+    }
+    public function downloadDocuments($id)
+    {
+        $documents = ExpenditureSupportingDocument::where('Expenditure_id', $id)->get();
+    
+        if ($documents->isEmpty()) {
+            return response()->json(['error' => 'No documents found.'], 404);
+        }
+    
+        // Create a temporary ZIP file
+        $zipFileName = 'expenditure_documents_' . $id . '.zip';
+        $zipPath = storage_path('app/tmp/' . $zipFileName);
+    
+        // Ensure the tmp directory exists
+        if (!file_exists(storage_path('app/tmp'))) {
+            mkdir(storage_path('app/tmp'), 0777, true);
+        }
+    
+        $zip = new ZipArchive;
+        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
+            foreach ($documents->groupBy('document_type') as $type => $groupedDocs) {
+                foreach ($groupedDocs as $doc) {
+                    if (Storage::exists($doc->path)) {
+                        // Add file to ZIP with folder structure by document_type
+                        $relativePath = "$type/" . basename($doc->path);
+                        $zip->addFile(storage_path('app/' . $doc->path), $relativePath);
+                    }
+                }
+            }
+            $zip->close();
+        } else {
+            return response()->json(['error' => 'Failed to create ZIP file.'], 500);
+        }
+    
+        return response()->download($zipPath)->deleteFileAfterSend(true);
+    }
+
+
 }

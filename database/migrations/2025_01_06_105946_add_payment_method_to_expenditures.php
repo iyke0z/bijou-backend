@@ -15,7 +15,7 @@ class AddPaymentMethodToExpenditures extends Migration
     {
         Schema::table('expenditures', function (Blueprint $table) {
             $table->string('payment_method')->default('cash');
-            $table->enum('payment_status', ['paid', 'not_paid'])->default('paid');
+            $table->enum('payment_status', ['paid', 'not_paid'])->default('not_paid');
         });
     }
 

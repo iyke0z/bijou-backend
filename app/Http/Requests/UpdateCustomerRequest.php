@@ -28,6 +28,7 @@ class UpdateCustomerRequest extends FormRequest
             "address"=>"required",
             "phone"=>"required",
             "email"=>"nullable|email",
+            "customer_type" => "required",
         ];
     }
 }

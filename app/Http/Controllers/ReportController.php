@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Interfaces\ReportRepositoryInterface;
 use App\Models\Banks;
 use App\Models\BusinessDetails;
 use App\Models\Customer;
 use App\Models\Expenditure;
 use App\Models\Liquidity;
+use App\Models\LogisticsAccount;
 use App\Models\Purchase;
 use App\Models\PurchaseDetails;
+use App\Models\Sale;
 use App\Models\Sales;
 use App\Models\SplitPayments;
 use App\Models\Transaction;
@@ -23,10 +26,12 @@ class ReportController extends Controller
     public $opening_time;
     public $closing_time;
     public $shopId;
-    public function __construct(){
+    public $reportRepo;
+    public function __construct(ReportRepositoryInterface $reportRepo){
         $businessTime = getBusinessTime();
         $this->opening_time = $businessTime['start_time'] ?? "00:00";
         $this->closing_time = $businessTime['closing_time'] ?? "23:59";
+        $this->reportRepo = $reportRepo;
     }
     public function general_report(Request $request){
         $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
@@ -48,13 +53,17 @@ class ReportController extends Controller
                                     ->with(['sales' => function($q){
                                         $q->join('products', 'sales.product_id', 'products.id')->withTrashed();
                                     }])
+                                ->with('deliveryNote')->with('logistics')
                                     ->orderBy('id', 'desc')
                                     ->withTrashed(), $shopId)->get();
                 
-                $get_sales = applyShopFilter(Sales::join('transactions', 'sales.ref', 'transactions.id')
+                $get_sales = Sale::join('transactions', 'sales.ref', 'transactions.id')
+                                    ->join('customers', 'transactions.customer_id', 'customers.id')
                                 ->whereBetween('transactions.created_at', [$start_date, $end_date])
                                 ->where('transactions.status', '!=', 'cancelled')
-                                ->with('product')->with('user'), $shopId)->get();
+                                ->where('sales.shop_id', $shopId)
+                                ->with('product')->with('user')
+                                ->orderBy('sales.created_at', 'desc')->get();
             
                 $get_purchases = applyShopFilter( PurchaseDetails::whereBetween('created_at', [$start_date, $end_date])
                                     ->with('purchase')->with('product'), $shopId)->get();
@@ -89,7 +98,7 @@ class ReportController extends Controller
                                     $q->join('products', 'sales.product_id', 'products.id');
                                 }]), $shopId)->get();
 
-            $get_sales = applyShopFilter(Sales::whereBetween('created_at', [$start_date, $end_date])
+            $get_sales = applyShopFilter(Sale::whereBetween('created_at', [$start_date, $end_date])
                                 ->where('type', 'cancelled')
                                 ->with('product')
                                 ->with('user'), $shopId)->get();
@@ -139,7 +148,7 @@ class ReportController extends Controller
             $split_payment_transfer = $split_payments->where("payment_method", "transfer")->sum("amount");
         
             // Fetch sales within the given date range
-            $sales = applyShopFilter(Sales::select(DB::raw('sum(price * qty) as amount'))
+            $sales = applyShopFilter(Sale::select(DB::raw('sum(price * qty) as amount'))
                         ->join('transactions', 'sales.ref', 'transactions.id')
                         ->where('transactions.user_id', $user)
                         ->whereBetween(DB::raw('sales.created_at'), [$start_date, $end_date]), $shopId)->first();
@@ -188,7 +197,7 @@ class ReportController extends Controller
                                 ->with('split')->with("user")->with('sales')->where('user_id', $id), $shopId)
                                 ->sum("amount");
                 
-                $sales = applyShopFilter(Sales::select(DB::raw('sum(price * qty) as  amount'))
+                $sales = applyShopFilter(Sale::select(DB::raw('sum(price * qty) as  amount'))
                             ->whereBetween('created_at', [$start_date, $end_date])
                             ->where('user_id', $id), $shopId)->get();
                 $sales = $sales[0]['amount'];
@@ -318,7 +327,7 @@ class ReportController extends Controller
             $transactions = applyShopFilter(Transaction::whereBetween('created_at', [$start_date, $end_date])
             ->with('split')->with("user")->with('sales'), $shopId)->sum("amount");
             
-            $sales = applyShopFilter(Sales::select(DB::raw('sum(price * qty) as  amount'))->whereBetween('created_at', [$start_date, $end_date]), $shopId)->get();
+            $sales = applyShopFilter(Sale::select(DB::raw('sum(price * qty) as  amount'))->whereBetween('created_at', [$start_date, $end_date]), $shopId)->get();
             $sales = $sales[0]['amount'];
 
             //get transactions paid with cash
@@ -504,6 +513,11 @@ class ReportController extends Controller
             ];
 
             return res_success('succes', $payable);
+    }
+
+    public function downloadReport(Request $request){
+
+        return $this->reportRepo->downloadReport($request->all());
     }
     public function getCogs(Request $request){
         $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
@@ -735,5 +749,16 @@ class ReportController extends Controller
                         ->get();
 
         return res_success('message', $liquidity);
+    }
+
+    public function getLogisticsStatement(Request $request){
+        $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
+        $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
+        $shopId = request()->query('shop_id');
+
+        $logistics = applyShopFilter(LogisticsAccount::whereBetween("created_at", [$start_date, $end_date]), $shopId)
+                        ->get();
+
+        return res_success('message', $logistics);
     }
 }
