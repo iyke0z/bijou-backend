@@ -70,8 +70,7 @@ class ProductRepository implements ProductRepositoryInterface{
                     "stock" => $request['products'][$i]["stock"],
                     "price" => $request['products'][$i]["price"],
                     "code" => $request['products'][$i]["code"],
-                    "shop_id" => $shopId
-                    ]
+                    "shop_id" => $shopId ]
                 );
             }else{
                 array_push($already_exists, strtolower($request['products'][$i]['name']));

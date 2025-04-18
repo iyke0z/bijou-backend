@@ -175,6 +175,16 @@ class ExpenditureController extends Controller
     public function updateExpenditurPaymentPlan(Request $request, $id){
         $expenditure = Expenditure::find($id);
         $shopId = request()->query('shop_id');
+        $request["payment_status"] = "not_paid";
+
+        if($request["payment_method"] == 'part_payment') {
+            $request["payment_status"] = "not_paid";
+        }else if($request["payment_method"] == 'on_credit') {
+            $request["payment_status"] = "not_paid";
+        }else{
+            $request["payment_status"] = "paid";
+        }
+        
         if ($expenditure) {
             $expenditure->update([
                 "payment_method" => $request["payment_method"],

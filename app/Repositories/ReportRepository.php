@@ -39,15 +39,8 @@ class ReportRepository implements ReportRepositoryInterface{
                     )->sum('amount');
         
         
-        $sales_by_product = applyShopFilter(Sale::whereBetween('created_at', [$start_date, $end_date])
-                            ->where('shop_id', $shopId)
-                            ->with('product')
-                            ->get()
-                            ->groupBy('product.name')
-                            ->map(function ($group) {
-                                return $group->sum('amount');
-                            }), $shopId)->toArray();
-
+        $sales_by_product = $this->getSalesByProduct($start_date, $end_date, $shopId);
+        
         $logistics = applyShopFilter(LogisticsAccount::where('type', 'credit')->whereBetween('created_at', [$start_date, $end_date]), $shopId)->sum('amount');
         $logistics_expenditure = applyShopFilter(LogisticsAccount::where('type', 'debit')->whereBetween('created_at', [$start_date, $end_date]), $shopId)->sum('amount');
 
@@ -132,8 +125,11 @@ class ReportRepository implements ReportRepositoryInterface{
                 ->whereBetween('created_at', [$start_date, $end_date]), $shopId)
                 ->selectRaw('SUM(cost * qty) as total')
                 ->value('total');
-                            
-            $payables = $expenditures_credit + $expenditures_part_payment + $purchases_part_credit + $purchases_part_payment;
+            
+            $part_payment_made = applyShopFilter(PurchaseDetails::where('payment_method', 'part_payment')
+                ->whereBetween('created_at', [$start_date, $end_date]), $shopId)
+                ->sum('part_payment_amount');
+            $payables = ($expenditures_credit + $purchases_part_credit + $expenditures_part_payment + $purchases_part_payment) - $part_payment_made;
 
 
             $payable_details = [
@@ -296,4 +292,45 @@ class ReportRepository implements ReportRepositoryInterface{
         return res_success('report', $report);
           
     }
+
+public function getSalesByProduct($start_date, $end_date, $shopId)
+{
+    
+
+    try {
+
+
+        // Build query
+        $query = Sale::select('products.id as product_id', 'products.name as product_name')
+            ->selectRaw('SUM(sales.price  * sales.qty) as total_amount')
+            ->join('products', 'sales.product_id', '=', 'products.id')
+            ->whereBetween('sales.created_at', [$start_date, $end_date]);
+
+        // Handle shop_id
+        if ($shopId !== 0) {
+            $query->where('sales.shop_id', $shopId);
+        }
+
+        // Group by product and execute
+        $sales_by_product = $query->groupBy('products.id', 'products.name')
+            ->orderBy('total_amount', 'desc')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'product_id' => $item->product_id,
+                    'product_name' => $item->product_name,
+                    'total_amount' => (float) $item->total_amount,
+                ];
+            })
+            ->toArray();
+
+        // Return response
+        return [
+            'sales_by_product' => $sales_by_product,
+        ];
+
+    } catch (\Exception $e) {
+        return $e->getMessage();
+    }
+}
 }

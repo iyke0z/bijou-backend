@@ -128,6 +128,15 @@ class ProductController extends Controller
     public function updatePaymentPlan(Request $request, $id){
         $purchase_detail = PurchaseDetails::find($id);
         $shopId = request()->query('shop_id');
+        $request["payment_status"] = "not_paid";
+
+        if($request["payment_method"] == 'part_payment') {
+            $request["payment_status"] = "not_paid";
+        }else if($request["payment_method"] == 'on_credit') {
+            $request["payment_status"] = "not_paid";
+        }else{
+            $request["payment_status"] = "paid";
+        }
 
         if ($purchase_detail) {
             $purchase_detail->update([
