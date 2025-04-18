@@ -30,7 +30,7 @@ class ReportRepository implements ReportRepositoryInterface{
         $shopName = "All Shops";
         if($shopId != 0){
             $shop = Shop::find($shopId);
-            $shopName = $shop->name;
+            $shopName = $shop->title;
         }
 
         $sales = applyShopFilter(Transaction::where('type', 'sold')
@@ -289,7 +289,7 @@ class ReportRepository implements ReportRepositoryInterface{
 
         ];
 
-        return res_success('report', $report);
+        return res_success('report generated', $report);
           
     }
 

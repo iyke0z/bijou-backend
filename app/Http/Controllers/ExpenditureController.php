@@ -171,7 +171,6 @@ class ExpenditureController extends Controller
     }
 
   
-
     public function updateExpenditurPaymentPlan(Request $request, $id){
         $expenditure = Expenditure::find($id);
         $shopId = request()->query('shop_id');
@@ -184,7 +183,7 @@ class ExpenditureController extends Controller
         }else{
             $request["payment_status"] = "paid";
         }
-        
+
         if ($expenditure) {
             $expenditure->update([
                 "payment_method" => $request["payment_method"],
