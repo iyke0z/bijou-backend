@@ -246,158 +246,133 @@ if (!function_exists('bankService')) {
             }
         }
         if (!function_exists('registerLedger')) {
-            function registerLedger($activity, $transaction_id, $amount, $shopId, $payment_type, $payment_method = null, $logistics = 0, $partial_payment = 0, $cost_price = null)
+            function registerLedger($activity, $transaction_id, $amount, $shopId, $payment_type, $payment_method = null, $logistics = 0, $partial_payment = 0, $cost_price = null, $expense_account = 'opex')
             {
-                // Sales transaction handling
-                if ($activity == 'sales') {
-                    Log::info('Processing sales transaction');
-            
+                // SALES TRANSACTION
+                if ($activity === 'sales') {
+                    Log::info("Processing SALES transaction");
+        
                     switch ($payment_type) {
                         case 'full_payment':
-                            if ($payment_method === 'cash') {
-                                registerTransaction('cash', 'debit', $amount, $transaction_id, $shopId, 'Debit cash account for full sales payment');
-                            } else {
-                                registerTransaction('bank', 'debit', $amount, $transaction_id, $shopId, 'Debit bank account for full sales payment');
-                            }
-                            registerTransaction('sales', 'credit', $amount, $transaction_id, $shopId, 'Credit sales account for full payment');
-                            
-                            // Handle COGS and inventory on sale
-                            if ($cost_price !== null) {
-                                registerTransaction('cost_of_goods_sold', 'debit', $cost_price, $transaction_id, $shopId, 'Debit COGS for sold inventory');
-                                registerTransaction('inventory', 'credit', $cost_price, $transaction_id, $shopId, 'Credit inventory for sold item');
-                            }
+                            registerPayment($payment_method, 'debit', $amount, $transaction_id, $shopId, 'full sales payment');
+                            registerTransaction('sales', 'credit', $amount, $transaction_id, $shopId, 'Credit sales for full payment');
                             break;
-            
+        
                         case 'on_credit':
-                            registerTransaction('accounts_receivable', 'debit', $amount, $transaction_id, $shopId, 'Debit accounts receivable for credit sale');
-                            registerTransaction('sales', 'credit', $amount, $transaction_id, $shopId, 'Credit sales account for credit sale');
-                            
-                            // Handle COGS and inventory on credit sale
-                            if ($cost_price !== null) {
-                                registerTransaction('cost_of_goods_sold', 'debit', $cost_price, $transaction_id, $shopId, 'Debit COGS for sold inventory');
-                                registerTransaction('inventory', 'credit', $cost_price, $transaction_id, $shopId, 'Credit inventory for sold item');
-                            }
+                            registerTransaction('accounts_receivable', 'debit', $amount, $transaction_id, $shopId, 'Credit sale on receivable');
+                            registerTransaction('sales', 'credit', $amount, $transaction_id, $shopId, 'Credit sales for credit sale');
                             break;
-            
+        
                         case 'part_payment':
                             $receivable = $amount - $partial_payment;
-                            registerTransaction('accounts_receivable', 'debit', $receivable, $transaction_id, $shopId, 'Debit accounts receivable for part payment');
-                            registerTransaction('sales', 'credit', $amount, $transaction_id, $shopId, 'Credit sales account for part payment');
-            
-                            if ($payment_method === 'cash') {
-                                registerTransaction('cash', 'debit', $partial_payment, $transaction_id, $shopId, 'Debit cash account for part payment');
-                            } else {
-                                registerTransaction('bank', 'debit', $partial_payment, $transaction_id, $shopId, 'Debit bank account for part payment');
-                            }
-                            
-                            // Handle COGS and inventory for part payment
-                            if ($cost_price !== null) {
-                                registerTransaction('cost_of_goods_sold', 'debit', $cost_price, $transaction_id, $shopId, 'Debit COGS for sold inventory');
-                                registerTransaction('inventory', 'credit', $cost_price, $transaction_id, $shopId, 'Credit inventory for sold item');
-                            }
+                            registerTransaction('accounts_receivable', 'debit', $receivable, $transaction_id, $shopId, 'Partially unpaid sales receivable');
+                            registerPayment($payment_method, 'debit', $partial_payment, $transaction_id, $shopId, 'part sales payment');
+                            registerTransaction('sales', 'credit', $amount, $transaction_id, $shopId, 'Credit sales for part payment');
                             break;
-            
+        
                         case 'complementary':
-                            registerTransaction('complementary', 'debit', $amount, $transaction_id, $shopId, 'Debit complementary account');
-                            registerTransaction('sales', 'credit', $amount, $transaction_id, $shopId, 'Credit sales account for complementary sale');
-                            
-                            // Handle COGS and inventory for complementary sale
-                            if ($cost_price !== null) {
-                                registerTransaction('cost_of_goods_sold', 'debit', $cost_price, $transaction_id, $shopId, 'Debit COGS for sold inventory');
-                                registerTransaction('inventory', 'credit', $cost_price, $transaction_id, $shopId, 'Credit inventory for sold item');
-                            }
+                            registerTransaction('marketing_expense', 'debit', $amount, $transaction_id, $shopId, 'Marketing cost - complementary sale');
+                            registerTransaction('inventory', 'credit', $cost_price, $transaction_id, $shopId, 'Credit inventory for free goods');
                             break;
                     }
-            
+        
+                    // Record COGS for all but complementary if cost price is provided
+                    if ($cost_price !== null && $payment_type !== 'complementary') {
+                        registerTransaction('cost_of_goods_sold', 'debit', $cost_price, $transaction_id, $shopId, 'COGS for sold inventory');
+                        registerTransaction('inventory', 'credit', $cost_price, $transaction_id, $shopId, 'Credit inventory for sold item');
+                    }
+        
+                    // Logistics (optional)
                     if ($logistics > 0) {
-                        registerTransaction('logistics', 'credit', $logistics, $transaction_id, $shopId, 'Credit logistics account for delivery cost');
-                        registerTransaction('sales', 'debit', $logistics, $transaction_id, $shopId, 'Debit sales account for logistics cost');
+                        registerTransaction('logistics_expense', 'debit', $logistics, $transaction_id, $shopId, 'Logistics cost');
+                        registerPayment($payment_method, 'credit', $logistics, $transaction_id, $shopId, 'Pay logistics from cash/bank');
                     }
                 }
-            
-                // Purchase transaction handling
-                if ($activity == 'purchase') {
-                    Log::info('Processing purchase transaction');
-            
+        
+                // PURCHASE TRANSACTION
+                if ($activity === 'purchase') {
+                    Log::info("Processing PURCHASE transaction");
+        
                     switch ($payment_type) {
                         case 'full_payment':
-                            if ($payment_method === 'cash') {
-                                registerTransaction('cash', 'credit', $amount, $transaction_id, $shopId, 'Credit cash account for purchase');
-                            } else {
-                                registerTransaction('bank', 'credit', $amount, $transaction_id, $shopId, 'Credit bank account for purchase');
-                            }
-                            registerTransaction('purchase', 'debit', $amount, $transaction_id, $shopId, 'Debit purchase account for full payment');
-            
-                            // Handle inventory on purchase
-                            if ($amount !== null) {
-                                registerTransaction('inventory', 'debit', $amount, $transaction_id, $shopId, 'Debit inventory account for purchase');
-                                registerTransaction('cost_of_purchase', 'credit', $amount, $transaction_id, $shopId, 'Credit cost of purchase for inventory acquisition');
-                            }
+                            registerPayment($payment_method, 'credit', $amount, $transaction_id, $shopId, 'purchase payment');
                             break;
-            
+        
                         case 'on_credit':
-                            registerTransaction('accounts_payable', 'credit', $amount, $transaction_id, $shopId, 'Credit accounts payable for credit purchase');
-                            registerTransaction('purchase', 'debit', $amount, $transaction_id, $shopId, 'Debit purchase account for credit');
-            
-                            // Handle inventory on credit purchase
-                            if ($amount !== null) {
-                                registerTransaction('inventory', 'debit', $amount, $transaction_id, $shopId, 'Debit inventory account for purchase');
-                                registerTransaction('cost_of_purchase', 'credit', $amount, $transaction_id, $shopId, 'Credit cost of purchase for inventory acquisition');
-                            }
+                            registerTransaction('accounts_payable', 'credit', $amount, $transaction_id, $shopId, 'Credit purchase on payable');
                             break;
-            
+        
                         case 'part_payment':
-                            $payable = floatval($amount) - floatval($partial_payment);
-                            registerTransaction('accounts_payable', 'credit', $payable, $transaction_id, $shopId, 'Credit accounts payable for part payment');
-            
-                            if ($payment_method === 'cash') {
-                                registerTransaction('cash', 'credit', $partial_payment, $transaction_id, $shopId, 'Credit cash account for part payment');
-                            } else {
-                                registerTransaction('bank', 'credit', $partial_payment, $transaction_id, $shopId, 'Credit bank account for part payment');
-                            }
-                            registerTransaction('purchase', 'debit', $amount, $transaction_id, $shopId, 'Debit purchase account for part payment');
-            
-                            // Handle inventory on part payment purchase
-                            if ($amount !== null) {
-                                registerTransaction('inventory', 'debit', $amount, $transaction_id, $shopId, 'Debit inventory account for purchase');
-                                registerTransaction('cost_of_purchase', 'credit', $amount, $transaction_id, $shopId, 'Credit cost of purchase for inventory acquisition');
-                            }
+                            $payable = $amount - $partial_payment;
+                            registerTransaction('accounts_payable', 'credit', $payable, $transaction_id, $shopId, 'Partially unpaid payable');
+                            registerPayment($payment_method, 'credit', $partial_payment, $transaction_id, $shopId, 'part purchase payment');
                             break;
                     }
+        
+                    // Inventory and purchase cost
+                    if ($amount !== null) {
+                        registerTransaction('inventory', 'debit', $amount, $transaction_id, $shopId, 'Add to inventory');
+                        registerTransaction('cost_of_purchase', 'credit', $amount, $transaction_id, $shopId, 'Credit purchase account');
+                    }
                 }
-            
-                // Negative stock handling
-                if ($activity == 'negative_stock') {
-                    registerTransaction('stock_adjustment', 'credit', $amount, $transaction_id, $shopId, 'Credit stock adjustment account for negative inventory');
-                    registerTransaction('inventory', 'debit', $amount, $transaction_id, $shopId, 'Debit inventory account for negative stock adjustment');
+        
+                // EXPENDITURE TRANSACTION
+                if ($activity === 'expenditure') {
+                    Log::info("Processing EXPENDITURE transaction");
+        
+                    switch ($payment_type) {
+                        case 'full_payment':
+                            registerPayment($payment_method, 'credit', $amount, $transaction_id, $shopId, 'full expense payment');
+                            break;
+        
+                        case 'on_credit':
+                            registerTransaction('accounts_payable', 'credit', $amount, $transaction_id, $shopId, 'Credit payable for expense');
+                            break;
+        
+                        case 'part_payment':
+                            $payable = $amount - $partial_payment;
+                            registerTransaction('accounts_payable', 'credit', $payable, $transaction_id, $shopId, 'Partial expense payable');
+                            registerPayment($payment_method, 'credit', $partial_payment, $transaction_id, $shopId, 'part expense payment');
+                            break;
+                    }
+        
+                    registerTransaction($expense_account, 'debit', $amount, $transaction_id, $shopId, "Debit {$expense_account} for expense");
+                }
+        
+                // NEGATIVE STOCK TRANSACTION
+                if ($activity === 'negative_stock') {
+                    registerTransaction('stock_adjustment', 'credit', $amount, $transaction_id, $shopId, 'Correct negative inventory');
+                    registerTransaction('inventory', 'debit', $amount, $transaction_id, $shopId, 'Adjust inventory for stock');
                 }
             }
         }
-    
-    // Helper method to register transaction into general ledger
-    
-    function registerTransaction($account_name, $transaction_type, $amount, $transaction_id, $shopId, $description)
-    {
-        // Get the current balance of the account before updating
-        $current_balance = getCurrentBalance($account_name, $shopId);
-        Log::info(''. $transaction_type .''. $amount);
-        
-        // Calculate the new balance (for future use, might add logic to update balance)
-        // Update balance logic can go here if needed
-        
-        // Insert the transaction record into the general ledger table
-        GeneralLedger::create([
-            'account_name' => $account_name,
-            'transaction_type' => $transaction_type,
-            'description' => $description,
-            'transaction_id' => $transaction_id,
-            'amount' => $amount,
-            'shop_id' => $shopId,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-    }
-    
+        function registerPayment($method, $type, $amount, $transaction_id, $shopId, $label = '') {
+            $account = ($method === 'cash') ? 'cash' : 'bank';
+            $label = ucfirst($label);
+            registerTransaction($account, $type, $amount, $transaction_id, $shopId, ucfirst("{$type} {$account} account for {$label}"));
+        }
+        function registerTransaction($account_name, $transaction_type, $amount, $transaction_id, $shopId, $description)
+        {
+            // Get the current balance of the account before updating
+            $current_balance = getCurrentBalance($account_name, $shopId);
+            Log::info(''. $transaction_type .''. $amount);
+            
+            // Calculate the new balance (for future use, might add logic to update balance)
+            // Update balance logic can go here if needed
+            
+            // Insert the transaction record into the general ledger table
+            GeneralLedger::create([
+                'account_name' => $account_name,
+                'transaction_type' => $transaction_type,
+                'description' => $description,
+                'transaction_id' => $transaction_id,
+                'amount' => $amount,
+                'shop_id' => $shopId,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+            
     // Method to get current balance of an account
     function getCurrentBalance($account_name, $shopId)
     {
@@ -410,6 +385,13 @@ if (!function_exists('bankService')) {
     }
     
 
+//     ✅ Proper treatment of complementary sales as promotional/marketing expense instead of income.
+
+// ✅ Separation of expenditures and purchases.
+
+// ✅ Correct handling of partial payments across all activities.
+
+// ✅ Clearer log statements and cleaner structure.
 
     // if (!function_exists('registerLedger')) {
     //     function registerLedger($activity, $activity_type=null, $amount, $transaction_id = null, $shopId){

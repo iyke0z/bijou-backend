@@ -9,6 +9,7 @@ use App\Models\Liquidity;
 use App\Models\ExpenditureDetails;
 use App\Models\ExpenditureSupportingDocument;
 use App\Models\LogisticsAccount;
+use App\Models\SplitPayments;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -148,7 +149,7 @@ class ExpenditureController extends Controller
     public function all_expenditures(Request $request){
         $shopId = $request->query('shop_id');
 
-        return res_success('all', applyShopFilter(Expenditure::with('type')->with('documents')->with('user'), $shopId)->get());
+        return res_success('all', applyShopFilter(Expenditure::with('exp_type')->with('documents')->with('user'), $shopId)->get());
     }
 
     public function delete_expenditure($id){
@@ -172,26 +173,26 @@ class ExpenditureController extends Controller
         }
     }
 
-  
     public function updateExpenditurPaymentPlan(Request $request, $id){
         $expenditure = Expenditure::find($id);
         $shopId = request()->query('shop_id');
-        $request["payment_status"] = "not_paid";
         $type = ExpenditureType::find($expenditure->expenditure_type_id);
 
-        if($request["payment_method"] == 'part_payment') {
+        if($request["type"] == 'part_payment') {
             $request["payment_status"] = "not_paid";
-        }else if($request["payment_method"] == 'on_credit') {
+        }else if($request["type"] == 'on_credit') {
             $request["payment_status"] = "not_paid";
         }else{
             $request["payment_status"] = "paid";
         }
+
 
         if ($expenditure) {
             $expenditure->update([
                 "payment_method" => $request["payment_method"],
                 "payment_status" => $request["payment_status"],
                 "part_payment_amount" => $request["part_payment_amount"],
+                'type' => $request["type"],
                 "duration" => $request["duration"]
             ]);
 
@@ -220,16 +221,70 @@ class ExpenditureController extends Controller
                     "DEBIT"
                 );
             }
+            if($request['is_split_payment'] == 1) {
+                foreach ($request["split"] as $split) {
+                    // store split values
+                    $split_payment = new SplitPayments();
+                    $split_payment->transaction_id = $expenditure->id;
+                    $split_payment->payment_method = $split["split_playment_method"];
+                    $split_payment->amount = $split["split_payment_amount"];                    
+                    $split_payment->shop_id = $shopId;
+                    $split_payment->transaction_type = 'expenditures';
+                    $split_payment->save();
+    
+                    registerLedger(
+                        'expenditure', 
+                        $expenditure->id, 
+                        floatval($split['split_payment_amount']),  //$shopId
+                        $shopId, 
+                        $request['type'], 
+                        $request['payment_method'], 
+                        0, 
+                        floatval($split['split_playment_method']),
+                        0,
+                        $type->expenditure_type
+                    );
+                }
+            }else if($request['type'] == 'part_payment') {
+                    $amount = $request['part_payment_amount'];
+                    if($request['part_payment_amount'] == $expenditure['amount']) {
+                        $request['payment_status'] = 'paid';
+                        $expenditure->update([
+                            "payment_status" => $request["payment_status"],
+                        ]);
+                    }
+                    
+                    registerLedger(
+                        'expenditure', 
+                        $expenditure->id, 
+                        $expenditure['amount'],  //$shopId
+                        $shopId, 
+                        $request['type'], 
+                        $request['payment_method'], 
+                        0, 
+                        floatval($request['part_payment_amount']),
+                        0,
+                        $type->expenditure_type
+    
+                    );
+               
+            }else{
+                    registerLedger(
+                        'expenditure', 
+                        $expenditure->id, 
+                        $expenditure['amount'],  //$shopId
+                        $shopId, 
+                        $request['type'], 
+                        $request['payment_method'], 
+                        0, 
+                        0,
+                        0,
+                        $type->expenditure_type
+    
+                    );
+            }
         }
-        registerLedger(
-            'purchases', 
-            $type->expenditure_type,
-            $expenditure['amount'],
-            $expenditure->id, 
-            $shopId, 
-            0, 
-            $request['payment_method'], 
-            $request['part_payment_amount'] ?? 0);
+        
         return res_completed('updated');
 
     }

@@ -69,7 +69,7 @@ class ReportController extends Controller
                                     ->with('purchase')->with('product'), $shopId)->get();
 
                 $get_expenditures = applyShopFilter(Expenditure::whereBetween('created_at', [$start_date, $end_date])
-                                    ->with('type')->with('user'), $shopId)->get();
+                                    ->with('exp_type')->with('user'), $shopId)->get();
 
             $report = [
                 'transaction' => $getTransactions,
@@ -464,10 +464,10 @@ class ReportController extends Controller
             $report =       applyShopFilter(Expenditure::select(DB::raw('date(created_at) as request_date'), 
                                         DB::raw('SUM(amount) as total_amount')   // Sum the amount per day
                                     )->whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date])
-                                    ->whereHas('type', function ($query) {
+                                    ->whereHas('exp_type', function ($query) {
                                         $query->where('expenditure_type', 'opex'); // Assuming 'name' is a column in the expenditure_type table
                                 })
-                                ->with('type')->with('user')
+                                ->with('user')
                                 ->groupBy('request_date') // Group by the extracted date
                                 ->orderBy('request_date'), $shopId) // 
                                 ->get();
@@ -547,7 +547,7 @@ class ReportController extends Controller
                 DB::raw('SUM(amount) as total_amount')
             )
             ->whereBetween('created_at', [$start_date, $end_date])
-            ->whereHas('type', function ($query) {
+            ->whereHas('exp_type', function ($query) {
                 $query->where('expenditure_type', 'cogs');
             })
             ->groupBy('purchase_date')
@@ -630,11 +630,11 @@ class ReportController extends Controller
         
         $cogs = applyShopFilter(Purchase::whereBetween('created_at', [$start_date, $end_date]), $shopId)->sum(DB::raw('price + added_costs'));
 
-        $opex = applyShopFilter(Expenditure::whereBetween('created_at', [$start_date, $end_date])->whereHas('type', function ($query) {
+        $opex = applyShopFilter(Expenditure::whereBetween('created_at', [$start_date, $end_date])->whereHas('exp_type', function ($query) {
                     $query->where('expenditure_type', 'opex'); // Assuming 'name' is a column in the expenditure_type table
                 }), $shopId)->sum('amount');
         
-        $assets = applyShopFilter(Expenditure::with('type')->whereHas('type', function ($query) {
+        $assets = applyShopFilter(Expenditure::with('exp_type')->whereHas('exp_type', function ($query) {
             $query->where('expenditure_type', 'capex');}), $shopId)->get();
 
         $annual_depreciation = 0;
@@ -662,7 +662,7 @@ class ReportController extends Controller
         }
 
         $cogs_exp = applyShopFilter(Expenditure::whereBetween('created_at', [$start_date, $end_date])
-                                    ->whereHas('type', function ($query) {
+                                    ->whereHas('exp_type', function ($query) {
                                             $query->where('expenditure_type', 'cogs'); // Assuming 'name' is a column in the expenditure_type table
                                     }), $shopId)->sum('amount');
         

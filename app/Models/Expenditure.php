@@ -12,7 +12,7 @@ class Expenditure extends Model
     protected $guarded = ['id'];
 
 
-    public function type(){
+    public function exp_type(){
         return $this->belongsTo(ExpenditureType::class, 'expenditure_type_id');
     }
 

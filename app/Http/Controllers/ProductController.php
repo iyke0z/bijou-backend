@@ -130,7 +130,8 @@ class ProductController extends Controller
         $purchase_detail = PurchaseDetails::where('id', $id)->first();
         $shopId = request()->query('shop_id');
         $request["payment_status"] = "not_paid";
-
+        $purchase_detailCount = PurchaseDetails::where('purchase_id', $purchase_detail->purchase_id)->count();
+        $added_cost = $request['added_cost'] ?? 0;
 
         if($request["type"] == 'part_payment') {
             $request["payment_status"] = "not_paid";
@@ -174,6 +175,7 @@ class ProductController extends Controller
                     "DEBIT"
                 );
             }
+            //split payments
             if ($request['is_split_payment'] == 1) {
                 foreach ($request["split"] as $split) {
                     // store split values
@@ -190,7 +192,7 @@ class ProductController extends Controller
                     registerLedger(
                         'purchase', 
                         $purchase_detail->id, 
-                        floatval($split['split_payment_amount']),  //$shopId
+                        floatval($split['split_payment_amount']) + ($added_cost/$purchase_detailCount),  //$shopId
                         $shopId, 
                         $request['type'], 
                         $request['payment_method'], 
@@ -199,14 +201,13 @@ class ProductController extends Controller
                         getCostPrice($purchase_detail["product_id"])
                     );
                 }
-            }else{
-                if($request['type'] == 'part_payment') {
-                    $amount = $request['part_payment_amount'];
-                    
+            }
+            // part payment
+            else if($request['type'] == 'part_payment') {                    
                     registerLedger(
                         'purchase', 
                         $purchase_detail->id, 
-                        $purchase_detail['cost'] * $purchase_detail['qty'],  //$shopId
+                        ($added_cost/$purchase_detailCount)  + $purchase_detail['cost'] * $purchase_detail['qty'],  //$shopId
                         $shopId, 
                         $request['type'], 
                         $request['payment_method'], 
@@ -214,33 +215,22 @@ class ProductController extends Controller
                         floatval($request['part_payment_amount']),
                         getCostPrice($purchase_detail["product_id"])
                     );
-                }else{
-                    registerLedger(
-                        'purchase', 
-                        $purchase_detail->id, 
-                        $purchase_detail['cost'] * $purchase_detail['qty'],  //$shopId
-                        $shopId, 
-                        $request['type'], 
-                        $request['payment_method'], 
-                        0, 
-                        0,
-                        getCostPrice($purchase_detail["product_id"])
-                    );
-                }
+            }else {
+                registerLedger(
+                    'purchase', 
+                    $purchase_detail->id, 
+                    ($added_cost/$purchase_detailCount)  + $purchase_detail['cost'] * $purchase_detail['qty'],  //$shopId
+                    $shopId, 
+                    $request['type'], 
+                    $request['payment_method'], 
+                    0, 
+                    floatval($request['part_payment_amount']),
+                    getCostPrice($purchase_detail["product_id"])
+                );
+
             }
-        }
-        if($purchase_detail){
-            $purchase_detailCount = PurchaseDetails::where('purchase_id', $purchase_detail->purchase_id)->count();
-            $added_cost = $request['added_cost'] ?? 0;
-            registerLedger(
-                'purchases', 
-                'cogs', 
-                ($added_cost/$purchase_detailCount) + $purchase_detail['cost'] * $purchase_detail['qty'], 
-                $purchase_detail->purchase_id, 
-                $shopId, 
-                0, 
-                $request['payment_method'], 
-                $request['part_payment_amount'] ?? 0);
+            
+            
         }
 
         return res_completed('updated');
