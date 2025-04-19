@@ -158,7 +158,10 @@ class ExpenditureController extends Controller
 
         // ddelete accounting 
         $ledger = GeneralLedger::where('transaction_id', $id)->where('transaction_type', "exp_".$id)->get();
-            
+        foreach ($ledger as $item) {
+            $item->delete();
+        }
+
         return res_completed('deleted');
     }
 
