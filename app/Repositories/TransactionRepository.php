@@ -6,6 +6,7 @@ use App\Interfaces\TransactionRepositoryInterface;
 use App\Models\Customer;
 use App\Models\CustomerDiscount;
 use App\Models\Discount;
+use App\Models\GeneralLedger;
 use App\Models\LogisticsAccount;
 use App\Models\Product;
 use App\Models\Sale;
@@ -148,7 +149,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
             
                     registerLedger(
                         $isNegativeStock ? 'negative_stock' : 'sales',
-                        $transaction->id,
+                        'sales_'.$transaction->id,
                         $split['split_payment_amount'],
                         $shopId,
                         $request['type'],
@@ -161,7 +162,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
             } else {
                 registerLedger(
                     $isNegativeStock ? 'negative_stock' : 'sales',
-                    $transaction->id,
+                    'sales_'.$transaction->id,
                     $request['amount'],
                     $shopId,
                     $request['type'],
@@ -325,6 +326,14 @@ class TransactionRepository implements TransactionRepositoryInterface{
             $transaction = Transaction::find($request['ref']);
             $transaction->update(['status' => "cancelled"]);
             $transaction->delete();
+
+            // delete from ledger
+            $ledger = GeneralLedger::where('ref', 'sales_'.$request['ref'])->get();
+            foreach ($ledger as $led) {
+                $led->delete();
+            }
+                
+
 
             return res_completed('sale order cancelled');
         //}

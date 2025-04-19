@@ -191,7 +191,7 @@ class ProductController extends Controller
                     
                     registerLedger(
                         'purchase', 
-                        $purchase_detail->id, 
+                        "purch_".$purchase_detail->id, 
                         floatval($split['split_payment_amount']) + ($added_cost/$purchase_detailCount),  //$shopId
                         $shopId, 
                         $request['type'], 
@@ -206,7 +206,7 @@ class ProductController extends Controller
             else if($request['type'] == 'part_payment') {                    
                     registerLedger(
                         'purchase', 
-                        $purchase_detail->id, 
+                        "purch_".$purchase_detail->id, 
                         ($added_cost/$purchase_detailCount)  + $purchase_detail['cost'] * $purchase_detail['qty'],  //$shopId
                         $shopId, 
                         $request['type'], 
@@ -218,7 +218,7 @@ class ProductController extends Controller
             }else {
                 registerLedger(
                     'purchase', 
-                    $purchase_detail->id, 
+                    "purch_".$purchase_detail->id, 
                     ($added_cost/$purchase_detailCount)  + $purchase_detail['cost'] * $purchase_detail['qty'],  //$shopId
                     $shopId, 
                     $request['type'], 

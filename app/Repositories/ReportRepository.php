@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\Validator;
 class ReportRepository implements ReportRepositoryInterface{
 
     public function getCustomerCount($start_date, $end_date, $shopId) {
-        return applyShopFilter(Customer::whereBetween('created_at', [$start_date, $end_date]), $shopId)->count();
+        return Customer::all()->count(); // Assuming you want the total count of customers
     }
 
     public function getExpenditureDetails($start_date, $end_date, $shopId) {
@@ -33,14 +33,15 @@ class ReportRepository implements ReportRepositoryInterface{
     }
 
     public function getPurchaseDetails($start_date, $end_date, $shopId) {
-        return applyShopFilter(Purchase::with('user')->with('documents')->with(['purchase_detail' => function($q) {
-            $q->with('product');
-        }])->whereBetween('created_at', [$start_date, $end_date]), $shopId)->get();
+        return applyShopFilter(PurchaseDetails::with('purchase.user')->with('purchase.documents')->with('product')->whereBetween('created_at', [$start_date, $end_date]), $shopId)->get();
     }
 
     public function getReceivablesDetails($start_date, $end_date, $shopId) {
-        return applyShopFilter(Customer::select(DB::raw('fullname') , DB::raw('ABS(wallet_balance) as wallet_balance'))
-            ->where('wallet_balance', "<", 0), $shopId)->get();
+        return applyShopFilter(
+            Customer::where('wallet_balance', '<', 0),
+            $shopId
+        )->get();
+        
     }
 
     // Method to get Cash Value
@@ -98,6 +99,8 @@ public function getLogisticsExpenditure($start_date, $end_date, $shopId)
             $shop = Shop::find($shopId);
             $shopName = $shop->title;
         }
+
+        
         // Get all ledger records within the date range for the specific shop
         $ledger = applyShopFilter(GeneralLedger::whereBetween('created_at', [$start_date, $end_date]), $shopId)->get();
 
@@ -113,73 +116,116 @@ public function getLogisticsExpenditure($start_date, $end_date, $shopId)
         $utilities = 0;
         $inventory_value = 0;
         $payables = 0;
-        $receivables_within_period = 0;
+        $receivables = 0;
         
-        // Iterate through the ledger to calculate necessary values
+        
+        $expenses = [
+            'marketing_cost' => 0,
+            'salaries' => 0,
+            'utilities' => 0,
+        ];
+        
+        $cash_balance = 0;
+        $bank_balance = 0;
+        
         foreach ($ledger as $entry) {
             $amount = $entry->amount;
-    
-            switch ($entry->account_name) {
+            $type = $entry->transaction_type;
+            $account = strtolower($entry->account_name);
+        
+            switch ($account) {
                 case 'sales':
-                    if ($entry->transaction_type == 'credit') {
+                    if ($type === 'credit') {
                         $turnover += $amount;
+        
+                        // Check for matching cash/bank debit (full payment)
+                        $paid = $ledger->contains(function ($e) use ($amount) {
+                            return in_array(strtolower($e->account_name), ['cash', 'bank']) &&
+                                $e->transaction_type === 'debit' &&
+                                $e->amount === $amount;
+                        });
+        
+                        if (!$paid) {
+                            $receivables += $amount;
+                        }
                     }
                     break;
-    
+        
                 case 'cost_of_goods_sold':
-                    if ($entry->transaction_type == 'credit') {
+                    if ($type === 'debit') {
                         $cogs += $amount;
                     }
                     break;
-    
-                case 'cash':
-                case 'bank':
-                    if ($entry->transaction_type == 'debit') {
-                        $total_expenditure += $amount;
-                    } else {
-                        $receivables_within_period += $amount;
-                    }
-                    break;
-    
-                case 'purchase':
-                    if ($entry->transaction_type == 'debit') {
-                        $total_expenditure += $amount;
-                    }
-                    break;
-    
+        
                 case 'inventory':
-                    if ($entry->transaction_type == 'debit') {
+                    if ($type === 'debit') {
                         $inventory_value += $amount;
                     }
                     break;
-    
+        
+                case 'cash':
+                    $cash_balance += ($type === 'debit') ? $amount : -$amount;
+                    break;
+        
+                case 'bank':
+                    $bank_balance += ($type === 'debit') ? $amount : -$amount;
+                    break;
+        
+                case 'purchase':
+                    if ($type === 'debit') {
+                        $total_expenditure += $amount;
+                    }
+                    break;
+        
                 case 'accounts_payable':
-                    if ($entry->transaction_type == 'credit') {
+                    if ($type === 'credit') {
                         $payables += $amount;
                     }
                     break;
-    
-                // Other expense accounts
+        
+                case 'accounts_receivable':
+                    if ($type === 'debit') {
+                        $receivables += $amount;
+                    }
+                    break;
+        
+                // Expenses
                 case 'marketing_cost':
-                    if ($entry->transaction_type == 'credit') {
-                        $marketing_cost += $amount;
-                    }
-                    break;
-    
                 case 'salaries':
-                    if ($entry->transaction_type == 'credit') {
-                        $salaries += $amount;
-                    }
-                    break;
-    
                 case 'utilities':
-                    if ($entry->transaction_type == 'credit') {
-                        $utilities += $amount;
+                    if ($type === 'credit') {
+                        $expenses[$account] += $amount;
+                        $total_expenditure += $amount;
                     }
                     break;
             }
-
         }
+        
+        
+
+        $debit_transactions = [];
+        $credit_transactions = [];
+        $total_debit = 0;
+        $total_credit = 0;
+
+        foreach ($ledger as $entry) {
+            $transaction = [
+                'account_name' => $entry->account_name,
+                'amount' => $entry->amount,
+                'description' => $entry->description ?? '',
+                'transaction_type' => $entry->transaction_type,
+                'date' => $entry->created_at->format('Y-m-d H:i:s'),
+            ];
+
+            if ($entry->transaction_type === 'debit') {
+                $debit_transactions[] = $transaction;
+                $total_debit += $entry->amount;
+            } elseif ($entry->transaction_type === 'credit') {
+                $credit_transactions[] = $transaction;
+                $total_credit += $entry->amount;
+            }
+        }
+
 
         $cash = $this->getCash($start_date, $end_date, $shopId);
         $bank = $this->getBank($start_date, $end_date,  $shopId);
@@ -204,8 +250,28 @@ public function getLogisticsExpenditure($start_date, $end_date, $shopId)
         $customers = $this->getCustomerCount($start_date, $end_date, $shopId);
         $budgeted_revenue = applyShopFilter(Budget::where('budget_type', 'revenue')->whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date]), $shopId)
         ->sum('budget_amount');
-$budgeted_expenditure = applyShopFilter(Budget::where('budget_type', 'expenditure')->whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date]), $shopId)
-->sum('budget_amount');
+        $budgeted_expenditure = applyShopFilter(Budget::where('budget_type', 'expenditure')->whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date]), $shopId)
+        ->sum('budget_amount');
+        // Non-current assets (assuming you don't track these yet, so initializing to 0)
+        $property_plant_equipment = 0;
+        $long_term_investments = 0;
+        $intangible_assets = 0;
+
+        // Long-term liabilities
+        $long_term_loans = 0;
+        $deferred_tax_liability = 0;
+
+        // Equity (extending for more detailed items)
+        $owner_investment = 0;
+        $retained_earnings = $net_profit;
+        $dividends = 0;
+
+        // Additional Income Statement items
+        $other_income = 0;
+        $tax_expense = 0;
+        $depreciation = 0;
+        $amortization = 0;
+
         // Build the report structure
         $report = [
             "summary" => [
@@ -240,15 +306,21 @@ $budgeted_expenditure = applyShopFilter(Budget::where('budget_type', 'expenditur
             ],
             "profit_loss_statement" => [
                 "revenue" => $turnover,
+                "other_income" => $other_income,
                 "cost_of_goods_sold" => $cogs,
                 "gross_profit" => $gross_profit,
                 "operating_expenses" => $opex + $salaries + $utilities + $marketing_cost,
-                "operating_profit" => $gross_profit - ($opex + $marketing_cost + $salaries + $utilities),
+                "depreciation" => $depreciation,
+                "amortization" => $amortization,
+                "operating_profit" => $gross_profit - ($opex + $marketing_cost + $salaries + $utilities + $depreciation + $amortization),
+                "tax_expense" => $tax_expense,
                 "net_profit" => $net_profit
             ],
+
             "receivables" => [
-                "total_receivables" => $receivables_within_period,
-                "receivable_details" => $this->getReceivablesDetails($start_date, $end_date, $shopId)
+                "total_receivables" => $receivables,
+                "receivable_details" => $this->getReceivablesDetails($start_date, $end_date, $shopId),
+                "customer_count" => $customers,
             ],
             "stock_movement" => [
                 "stock_sold" => $this->getStockSold($start_date, $end_date, $shopId),
@@ -260,25 +332,35 @@ $budgeted_expenditure = applyShopFilter(Budget::where('budget_type', 'expenditur
                 "cash_outflow" => $this->getCashOutflow($start_date, $end_date, $shopId)
             ],
             "balance_sheet" => [
-                "assets" => [
-                    "current_assets" => [
-                        "cash" => $cash,
-                        "bank" => $bank,
-                        "accounts_receivable" => $receivables_within_period,
-                        "inventory" => $inventory_value,
-                    ],
+            "assets" => [
+                "current_assets" => [
+                    "cash" => $cash,
+                    "bank" => $bank,
+                    "accounts_receivable" => $receivables,
+                    "inventory" => $inventory_value,
                 ],
-                "liabilities" => [
-                    "current_liabilities" => [
-                        "accounts_payable" => $payables,
-                    ],
-                ],
-                "equity" => [
-                    "owner_equity" => (($cash + $receivables_within_period + $inventory_value) - $payables) ,
-                    "retained_earnings" => $net_profit,
-                ],
-
+                "non_current_assets" => [
+                    "property_plant_equipment" => $property_plant_equipment,
+                    "long_term_investments" => $long_term_investments,
+                    "intangible_assets" => $intangible_assets
+                ]
             ],
+            "liabilities" => [
+                "current_liabilities" => [
+                    "accounts_payable" => $payables,
+                ],
+                "non_current_liabilities" => [
+                    "long_term_loans" => $long_term_loans,
+                    "deferred_tax_liability" => $deferred_tax_liability
+                ]
+            ],
+            "equity" => [
+                "owner_investment" => (($cash + $receivables + $inventory_value) - $payables) - $net_profit,
+                "retained_earnings" => $retained_earnings,
+                "dividends" => $dividends
+            ]
+        ],
+
             "logistics_break_down" => [
                 "revenue" => $logistics,
                 "expenditure" => $logistics_expenditure
@@ -296,6 +378,13 @@ $budgeted_expenditure = applyShopFilter(Budget::where('budget_type', 'expenditur
                 "expenditure_variance" => $total_expenditure - $budgeted_expenditure,
             ],
             "ledger_details"=> $ledger,
+            "general_ledger_summary" => [
+                "total_debit" => $total_debit,
+                "total_credit" => $total_credit,
+                "debit_transactions" => $debit_transactions,
+                "credit_transactions" => $credit_transactions
+            ],
+
         ];
     
         return res_success('report generated', $report);

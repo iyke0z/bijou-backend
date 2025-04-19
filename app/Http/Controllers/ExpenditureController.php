@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Expenditure;
 use App\Models\ExpenditureSupportingDocuments;
 use App\Models\ExpenditureType;
+use App\Models\GeneralLedger;
 use App\Models\Liquidity;
 use App\Models\ExpenditureDetails;
 use App\Models\ExpenditureSupportingDocument;
@@ -154,6 +155,10 @@ class ExpenditureController extends Controller
 
     public function delete_expenditure($id){
         Expenditure::findOrFail($id)->delete();
+
+        // ddelete accounting 
+        $ledger = GeneralLedger::where('transaction_id', $id)->where('transaction_type', "exp_".$id)->get();
+            
         return res_completed('deleted');
     }
 
@@ -234,7 +239,7 @@ class ExpenditureController extends Controller
     
                     registerLedger(
                         'expenditure', 
-                        $expenditure->id, 
+                        "exp_".$expenditure->id, 
                         floatval($split['split_payment_amount']),  //$shopId
                         $shopId, 
                         $request['type'], 
@@ -256,7 +261,7 @@ class ExpenditureController extends Controller
                     
                     registerLedger(
                         'expenditure', 
-                        $expenditure->id, 
+                        "exp_".$expenditure->id, 
                         $expenditure['amount'],  //$shopId
                         $shopId, 
                         $request['type'], 
@@ -271,7 +276,7 @@ class ExpenditureController extends Controller
             }else{
                     registerLedger(
                         'expenditure', 
-                        $expenditure->id, 
+                        "exp_".$expenditure->id, 
                         $expenditure['amount'],  //$shopId
                         $shopId, 
                         $request['type'], 

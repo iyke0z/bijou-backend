@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateShopRequest;
+use App\Models\GeneralLedger;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Models\ShopAccess;
@@ -131,19 +132,19 @@ class ShopController extends Controller
                 $product_id = $request['product_id'];
                 
                 $transaction = StrockTransaction::create([
-                    "originating_shop" => $originatingShop,
-                    "destination_shop" => $destinationShop,
-                    "qty" => $qty,
-                    "product_id" => $product_id,
-                    "shop_one_user_id" => $transferUserId,
-                    "shop_two_user_id" => $destinationUserId,
-                    "previous_stock" => 0,
-                    "current_stock" => 0,
-                    "previous_stock_two" => 0,
-                    "current_stock_two"=> 0,
-                    "transaction_status" => $transaction_status,
-                    "transaction_method" => $transaction_method,
-                ]);
+                                    "originating_shop" => $originatingShop,
+                                    "destination_shop" => $destinationShop,
+                                    "qty" => $qty,
+                                    "product_id" => $product_id,
+                                    "shop_one_user_id" => $transferUserId,
+                                    "shop_two_user_id" => $destinationUserId,
+                                    "previous_stock" => 0,
+                                    "current_stock" => 0,
+                                    "previous_stock_two" => 0,
+                                    "current_stock_two"=> 0,
+                                    "transaction_status" => $transaction_status,
+                                    "transaction_method" => $transaction_method,
+                                ]);
 
 
                 $shop1 = Product::where('id', $transaction->product_id )->where('shop_id', $transaction->originating_shop)->first();
@@ -155,7 +156,23 @@ class ShopController extends Controller
                 $transaction->previous_stock = $previous_stock;
                 $transaction->current_stock = $current_stock;
                 $transaction->save();
+                // accounting
+                $isNegativeStock = false;
+                if ($shop1->current_stock < 0) {
+                    $isNegativeStock = true;
+                }
 
+                registerLedger(
+                    $isNegativeStock ? 'negative_stock' : 'sales',
+                    "stktrf_".$transaction->id,
+                    getCostPrice($shop1->id),
+                    $transaction->originating_shop,
+                    'full_payment',
+                    'transfer',
+                    0,
+                    $request['part_payment_amount'] ?? 0,
+                    getCostPrice($shop1->is) ,
+                );
         // }
 
         return res_created('operation process started successfully', '');
@@ -190,6 +207,28 @@ class ShopController extends Controller
             $transaction->update([
                 "transaction_status" => 'completed',
             ]);
+
+            // accounting
+            $isNegativeStock = false;
+            if ($transaction->current_stock_two < 0) {
+                $isNegativeStock = true;
+            }
+
+            registerLedger(
+                $isNegativeStock ? 'negative_stock' : 'purchase',
+                "stktrf_".$transaction->id,
+                getCostPrice($shop2->id),
+                $transaction->destination_shop,
+                'full_payment',
+                'transfer',
+                0,
+                $request['part_payment_amount'] ?? 0,
+                getCostPrice($shop2->id) ,
+            );
+            // the receiving shop is purchasging the product from the originating shop
+
+            // cost for this is same as the cost price of the product in the originating shop
+
             return res_success('success', $transaction);
         }else{
             return res_not_found('record not found');
@@ -203,6 +242,16 @@ class ShopController extends Controller
                 'shop_two_user_id' => Auth::user()->id
 
             ]);
+
+            // return the product to shop 1
+            $product = Product::where('id', $transaction->product_id )->where('shop_id', $transaction->originating_shop)->first();
+            $previous_stock = $product->stock;
+            $current_stock = $previous_stock + $transaction->qty;
+            $product->stock = $current_stock;
+            $product->save();
+
+            // delete the accounting ledger
+            $ledgers = GeneralLedger::where('transaction_id', "stktrf_".$transaction->id)->where('type', 'stktrf_'.$transaction->id)->get();
             return res_success('success', $transaction);
         }else{
             return res_not_found('record not found');

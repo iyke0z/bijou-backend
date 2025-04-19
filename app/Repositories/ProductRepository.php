@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Interfaces\ProductRepositoryInterface;
 use App\Models\Category;
+use App\Models\GeneralLedger;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseDetails;
@@ -276,6 +277,14 @@ class ProductRepository implements ProductRepositoryInterface{
             $product->out_of_stock = 0;
             $product->save();
         }
+
+         // delete from ledger
+         $ledger = GeneralLedger::where('transaction_id', "purch_".$id)->get();
+         $ledger = $ledger->toArray();
+         for ($i= 0; $i < count($ledger) ; $i++) {
+             GeneralLedger::findOrFail($ledger[$i]['id'])->delete();
+         }
+         
         $detail->delete();
         return res_completed("Deleted");
     }
@@ -288,6 +297,12 @@ class ProductRepository implements ProductRepositoryInterface{
             PurchaseDetails::findOrFail($detail[$i]['id'])->delete();
         }
 
+        // delete from ledger
+        $ledger = GeneralLedger::where('transaction_id', "purch_".$id)->get();
+        $ledger = $ledger->toArray();
+        for ($i= 0; $i < count($ledger) ; $i++) {
+            GeneralLedger::findOrFail($ledger[$i]['id'])->delete();
+        }
         return res_completed("Deleted");
     }
 

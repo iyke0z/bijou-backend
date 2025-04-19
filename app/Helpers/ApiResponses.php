@@ -290,31 +290,38 @@ if (!function_exists('bankService')) {
                 }
         
                 // PURCHASE TRANSACTION
+                // PURCHASE TRANSACTION
                 if ($activity === 'purchase') {
                     Log::info("Processing PURCHASE transaction");
-        
+
                     switch ($payment_type) {
                         case 'full_payment':
                             registerPayment($payment_method, 'credit', $amount, $transaction_id, $shopId, 'purchase payment');
                             break;
-        
+
                         case 'on_credit':
                             registerTransaction('accounts_payable', 'credit', $amount, $transaction_id, $shopId, 'Credit purchase on payable');
                             break;
-        
+
                         case 'part_payment':
                             $payable = $amount - $partial_payment;
                             registerTransaction('accounts_payable', 'credit', $payable, $transaction_id, $shopId, 'Partially unpaid payable');
                             registerPayment($payment_method, 'credit', $partial_payment, $transaction_id, $shopId, 'part purchase payment');
                             break;
                     }
-        
+
                     // Inventory and purchase cost
                     if ($amount !== null) {
                         registerTransaction('inventory', 'debit', $amount, $transaction_id, $shopId, 'Add to inventory');
-                        registerTransaction('cost_of_purchase', 'credit', $amount, $transaction_id, $shopId, 'Credit purchase account');
+
+                        // ✅ Add corresponding debit to purchase expense account
+                        // registerTransaction('purchase', 'debit', $amount, $transaction_id, $shopId, 'Record purchase expense');
+
+                        // ✅ Credit the cost of purchase for double-entry
+                        // registerTransaction('cost_of_purchase', 'credit', $amount, $transaction_id, $shopId, 'Credit purchase account');
                     }
                 }
+
         
                 // EXPENDITURE TRANSACTION
                 if ($activity === 'expenditure') {
