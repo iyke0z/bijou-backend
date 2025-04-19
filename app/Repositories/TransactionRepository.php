@@ -70,18 +70,23 @@ class TransactionRepository implements TransactionRepositoryInterface{
             $transaction->platform = 'online';
             $transaction->user_id = $auth->user_id;
             $transaction->status =  $request['is_order'] == true ? "pending" : "completed";
-            $request['is_order'] == false ? $transaction->type = "sold" : null;
+            $request['is_order'] == false ? $transaction->type = $request['type'] : null;
             $request['is_order'] == false ? $transaction->amount  = $request['amount'] : null;
             $request['is_order'] == false ? $transaction->payment_method = $request['payment_method'] : null;
             $request['payment_method'] == "part_payment" ? $transaction->payment_method = "on_credit" : $transaction->payment_method =  $request['payment_method'];
             $request['payment_method'] == "part_payment" ? $transaction->is_part_payment = 1 : 0;
             $request['payment_method'] == "part_payment" ? $transaction->part_payment_amount = $request['part_payment_amount'] : 0;
+            $request->is_split_payment = $request['is_split_payment'];
             $transaction->table_description = $request['description'];
             $transaction->customer_id = $request['customer_id'] ?? $request['customer_id'];
             $transaction->shop_id = $shopId;
             $transaction->discount = $request['discount'];
             $transaction->vat = $request['vat'];
             $transaction->save();
+
+            // register ledger
+           
+
 
             // if logistics is greater than 0, transfer to logistics account
             if($request['logistics'] > 0){
@@ -115,9 +120,9 @@ class TransactionRepository implements TransactionRepositoryInterface{
                 $sale->qty = $request['products'][$i]["qty"];
                 $sale->user_id = $auth->user_id;
                 if($stock > 0){
-                    $sale->is_negative_sale = False;
+                    $sale->is_negative_sale = false;
                 }else{
-                    $sale->is_negative_sale = True;
+                    $sale->is_negative_sale = true;
                     // this is the number of items needed after stock negative values stores the requested quantity
                     $sale->no_of_items = abs(Product::find($request["products"][$i]["product_id"])->stock) - $request['products'][$i]['qty'];
                 }
@@ -125,17 +130,93 @@ class TransactionRepository implements TransactionRepositoryInterface{
                 
                 $sale->save();
 
-                // // sales order creation
+                // cost price
+
+                // register ledger
+                if($sale->is_negative_sale == false && $request['is_split_payment'] == 0){
+                        registerLedger('sales',
+                        $transaction->id,
+                        $request['amount'],
+                        $shopId,
+                        $request['type'],
+                        $request['payment_method'],
+                        $request['logistics'],
+                        $request['part_payment_amount'] ?? 0,
+                        getCostPrice($request['products'][$i]["product_id"]));
+
+
+                }else if($sale->is_negative_sale == true && $request['is_split_payment'] == 0){
+                    registerLedger(
+                        'stock_adjustment', 
+                        $transaction->id, 
+                        $request['amount'],  //$shopId
+                        $shopId, 
+                        $request['type'], 
+                        $request['payment_method'], 
+                        $request['logistics'] ?? 0, 
+                        $request['part_payment_amount'] ?? 0,
+                        getCostPrice($request['products'][$i]["product_id"])
+                    );
+
+                }else if($sale->is_negative_sale == true && $request['is_split_payment'] == 1){
+                    foreach ($request["split"] as $split) {
+                        // store split values
+                        $split_payment = new SplitPayments();
+                        $split_payment->transaction_id = $transaction->id;
+                        $split_payment->payment_method = $split["split_playment_method"];
+                        $split_payment->amount = $split["split_payment_amount"];
+                        $split_payment->bank_id = $split["bank_id"];
+                        $split_payment->shop_id = $shopId;
+                        $split_payment->save();
+                        
+                        registerLedger(
+                            'stock_adjustment', 
+                            $transaction->id, 
+                            $split['split_payment_amount'],  //$shopId
+                            $shopId, 
+                            $request['type'], 
+                            $request['payment_method'], 
+                            $request['logistics'] ?? 0, 
+                            $split['split_playment_method'],
+                            getCostPrice($request['products'][$i]["product_id"])
+                        );
+                    }
+    
+                }else if($sale->is_negative_sale == false && $request['is_split_payment'] == 1){
+                    foreach ($request["split"] as $split) {
+                        // store split values
+                        $split_payment = new SplitPayments();
+                        $split_payment->transaction_id = $transaction->id;
+                        $split_payment->payment_method = $split["split_playment_method"];
+                        $split_payment->amount = $split["split_payment_amount"];
+                        $split_payment->bank_id = $split["bank_id"];
+                        $split_payment->shop_id = $shopId;
+                        $split_payment->save();
+                     
+                        registerLedger(
+                                'stock_adjustment', 
+                                $transaction->id, 
+                                $split['split_payment_amount'],  //$shopId
+                                $shopId, 
+                                $request['type'], 
+                                $request['payment_method'], 
+                                $request['logistics'] ?? 0, 
+                                $split['split_playment_method'],
+                                getCostPrice($request['products'][$i]["product_id"])
+                            );
+                    }
+                   
+                }
     
             }
 
-            if($request['payment_method'] == "wallet" || $request['payment_method'] == 'on_credit'){
+            if($request['payment_method'] == "wallet" || $request['type'] == 'on_credit'){
                 $customer = Customer::find($request["customer_id"]);
                 $customer->wallet_balance = $customer->wallet_balance - $request["amount"];
                 $customer->save();
             }
-
-            if($request['payment_method'] == "part_payment"){
+            
+            if($request['type'] == "part_payment"){
                 $customer = Customer::find($request["customer_id"]);
                 $customer->wallet_balance = $customer->wallet_balance - ($request["amount"] - $request["part_payment_amount"]);
                 $customer->save();
@@ -149,14 +230,13 @@ class TransactionRepository implements TransactionRepositoryInterface{
                 );
             }
 
-            if ( $request['is_order'] == false && $request['payment_method'] == "on_credit" || $request['payment_method'] != 'part_payment_amount') {
+            if ( $request['is_order'] == false && $request['type'] == "on_credit" || $request['type'] != 'part_payment_amount') {
                 bankService(
                     $request['amount'], 
                     "SALES", 
                     $transaction->id,
                     $shopId,
                     "CREDIT"
-
                 );
             }
             

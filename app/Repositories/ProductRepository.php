@@ -168,6 +168,8 @@ class ProductRepository implements ProductRepositoryInterface{
                 $product->out_of_stock = 0;
                 $product->save();
             }
+
+            
         }
         // getSumof "purchase_id" => $request['purchase'][$i]["purchase_id"],
         $price = array_sum($totalPrice);
@@ -177,6 +179,8 @@ class ProductRepository implements ProductRepositoryInterface{
             "added_costs"=>$request['added_cost'],
             "price" => $price
         ]);
+
+       
 
         return res_completed('Purchase Saved');
     }
@@ -257,7 +261,6 @@ class ProductRepository implements ProductRepositoryInterface{
 
         return res_completed("purchase updated");
     }
-
     public function delete_purchase_detail($id){
         // reduce price from purchase
         $detail = PurchaseDetails::findOrFail($id);

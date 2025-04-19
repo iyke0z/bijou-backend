@@ -17,6 +17,7 @@ use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseDetails;
 use App\Models\PurchaseSupportingDocument;
+use App\Models\SplitPayments;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -126,13 +127,14 @@ class ProductController extends Controller
     }
 
     public function updatePaymentPlan(Request $request, $id){
-        $purchase_detail = PurchaseDetails::find($id);
+        $purchase_detail = PurchaseDetails::where('id', $id)->first();
         $shopId = request()->query('shop_id');
         $request["payment_status"] = "not_paid";
 
-        if($request["payment_method"] == 'part_payment') {
+
+        if($request["type"] == 'part_payment') {
             $request["payment_status"] = "not_paid";
-        }else if($request["payment_method"] == 'on_credit') {
+        }else if($request["type"] == 'on_credit') {
             $request["payment_status"] = "not_paid";
         }else{
             $request["payment_status"] = "paid";
@@ -143,7 +145,8 @@ class ProductController extends Controller
                 "payment_method" => $request["payment_method"],
                 "payment_status" => $request["payment_status"],
                 "part_payment_amount" => $request["part_payment_amount"],
-                "duration" => $request["duration"]
+                "duration" => $request["duration"],
+                "type" => $request["type"],
             ]);
 
             if ($request["payment_status"] == 'paid') {
@@ -154,7 +157,7 @@ class ProductController extends Controller
                     $shopId,
                     "DEBIT"
                 );
-            }else if ($request['payment_method'] == 'part_payment') {
+            }else if ($request['type'] == 'part_payment') {
                 bankService(
                     $request['part_payment_amount'], 
                     "EXPENDITURE COGS - PART PAYMENT",
@@ -171,6 +174,73 @@ class ProductController extends Controller
                     "DEBIT"
                 );
             }
+            if ($request['is_split_payment'] == 1) {
+                foreach ($request["split"] as $split) {
+                    // store split values
+                    $split_payment = new SplitPayments();
+                    $split_payment->transaction_id = $purchase_detail->id;
+                    $split_payment->payment_method = $split["split_playment_method"];
+                    $split_payment->amount = $split["split_payment_amount"];                    
+                    $split_payment->shop_id = $shopId;
+                    $split_payment->transaction_type = 'purchases';
+                    $split_payment->save();
+
+                    
+                    
+                    registerLedger(
+                        'purchase', 
+                        $purchase_detail->id, 
+                        floatval($split['split_payment_amount']),  //$shopId
+                        $shopId, 
+                        $request['type'], 
+                        $request['payment_method'], 
+                        0, 
+                        floatval($split['split_playment_method']),
+                        getCostPrice($purchase_detail["product_id"])
+                    );
+                }
+            }else{
+                if($request['type'] == 'part_payment') {
+                    $amount = $request['part_payment_amount'];
+                    
+                    registerLedger(
+                        'purchase', 
+                        $purchase_detail->id, 
+                        $purchase_detail['cost'] * $purchase_detail['qty'],  //$shopId
+                        $shopId, 
+                        $request['type'], 
+                        $request['payment_method'], 
+                        0, 
+                        floatval($request['part_payment_amount']),
+                        getCostPrice($purchase_detail["product_id"])
+                    );
+                }else{
+                    registerLedger(
+                        'purchase', 
+                        $purchase_detail->id, 
+                        $purchase_detail['cost'] * $purchase_detail['qty'],  //$shopId
+                        $shopId, 
+                        $request['type'], 
+                        $request['payment_method'], 
+                        0, 
+                        0,
+                        getCostPrice($purchase_detail["product_id"])
+                    );
+                }
+            }
+        }
+        if($purchase_detail){
+            $purchase_detailCount = PurchaseDetails::where('purchase_id', $purchase_detail->purchase_id)->count();
+            $added_cost = $request['added_cost'] ?? 0;
+            registerLedger(
+                'purchases', 
+                'cogs', 
+                ($added_cost/$purchase_detailCount) + $purchase_detail['cost'] * $purchase_detail['qty'], 
+                $purchase_detail->purchase_id, 
+                $shopId, 
+                0, 
+                $request['payment_method'], 
+                $request['part_payment_amount'] ?? 0);
         }
 
         return res_completed('updated');

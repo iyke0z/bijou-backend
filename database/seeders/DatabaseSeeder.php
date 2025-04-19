@@ -26,6 +26,5 @@ class DatabaseSeeder extends Seeder
         // $this->call(BusinessDetailsSeeder::class);
         // $this->call(PackageSeeder::class);
         // $this->call(BusinessTimeSeeder::class);
-        // $this->call(ExpenditureSeeders::class);
     }
 }

@@ -101,7 +101,8 @@ class AuthRepository implements AuthRepositoryInterface{
             "vat" => $request["vat"],
             "status"=>$request["status"],
             "expiry_date" => $request['expiry_date'],
-            "is_negative_stock" => $request['is_negative_stock']
+            "is_negative_stock" => $request['is_negative_stock'],
+            "owner_equity" => $request['owner_equity'],
         ]);
         if (isset($request['times']['start_time']) && isset($request['times']['closing_time'])) {
             

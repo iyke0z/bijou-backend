@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Interfaces\ReportRepositoryInterface;
 use App\Models\Budget;
+use App\Models\BusinessDetails;
 use App\Models\Customer;
 use App\Models\Expenditure;
 use App\Models\Liquidity;
@@ -13,6 +14,7 @@ use App\Models\Purchase;
 use App\Models\PurchaseDetails;
 use App\Models\Sale;
 use App\Models\Shop;
+use App\Models\SplitPayments;
 use App\Models\Transaction;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -55,6 +57,14 @@ class ReportRepository implements ReportRepositoryInterface{
 
         $opex = applyShopFilter(Expenditure::whereBetween('created_at', [$start_date, $end_date])->whereHas('type', function ($query) {
                     $query->where('expenditure_type', 'opex'); // Assuming 'name' is a column in the expenditure_type table
+                }), $shopId)->sum('amount');
+
+        $salaries = applyShopFilter(Expenditure::whereBetween('created_at', [$start_date, $end_date])->whereHas('type', function ($query) {
+                    $query->where('expenditure_type', 'salaries'); // Assuming 'name' is a column in the expenditure_type table
+                }), $shopId)->sum('amount');
+    
+        $utilities = applyShopFilter(Expenditure::whereBetween('created_at', [$start_date, $end_date])->whereHas('type', function ($query) {
+                    $query->where('expenditure_type', 'utilities'); // Assuming 'name' is a column in the expenditure_type table
                 }), $shopId)->sum('amount');
         
         $assets = applyShopFilter(Expenditure::with('type')->whereHas('type', function ($query) {
@@ -151,9 +161,43 @@ class ReportRepository implements ReportRepositoryInterface{
                                             ->get(),
                 
             ];
-        $cash = applyShopFilter(Liquidity::where('transaction_type', "CREDIT")->whereBetween('created_at', [$start_date, $end_date]), $shopId)->orderBy('id', 'desc')->value('current_balance');;
-        $logistics_cash = applyShopFilter(LogisticsAccount::where('type', 'credit')->whereBetween('created_at', [$start_date, $end_date]), $shopId)->orderBy('id', 'desc')->value('current_balance');;
-        $total_cash = $cash + $logistics_cash;
+
+            // Fetch transactions within the given date range
+            $transactions = applyShopFilter(Transaction::whereBetween(DB::raw('created_at'), [$start_date, $end_date])
+                                           ,$shopId)->get();
+        
+            // Calculate total amounts for all payment methods        
+            $cash_total = $transactions->where("payment_method", "cash")->sum("amount");
+            $card_total = $transactions->where("payment_method", "card")->sum("amount");
+            $transfer_total = $transactions->where("payment_method", "transfer")->sum("amount");
+            $split_total = $transactions->where("payment_method", "split")->sum("amount");
+        
+            // Fetch split payment details
+            $split_payments = applyShopFilter(SplitPayments::select('split_payments.*')
+                                ->join('transactions', 'split_payments.transaction_id', 'transactions.id')
+                                ->whereBetween(DB::raw('split_payments.created_at'), [$start_date, $end_date])
+                                ,$shopId)->get();
+        
+            $split_payment_card = $split_payments->where("payment_method", "card")->sum("amount");
+            $split_payment_cash = $split_payments->where("payment_method", "cash")->sum("amount");
+            $split_payment_transfer = $split_payments->where("payment_method", "transfer")->sum("amount");
+        
+            // Fetch sales within the given date range
+            $sales = applyShopFilter(Sale::select(DB::raw('sum(price * qty) as amount'))
+                        ->join('transactions', 'sales.ref', 'transactions.id')
+                        ->whereBetween(DB::raw('sales.created_at'), [$start_date, $end_date]), $shopId)->first();
+        
+            $total_sales = $sales->amount ?? 0;
+        
+            // Fetch outstanding transactions
+            $outstanding = applyShopFilter(Transaction::whereBetween(DB::raw('created_at'), [$start_date, $end_date])
+                                ->where('status', 'pending')
+                                ->with('sales', 'split'), $shopId
+                                )->get();
+        
+        $cash = $cash_total + $split_payment_cash;
+        $bank = $transfer_total + $split_payment_transfer + $card_total + $split_payment_card;
+        $totalBalance = $cash + $bank;
 
         $cogs_exp = applyShopFilter(Expenditure::whereBetween('created_at', [$start_date, $end_date])
                                     ->whereHas('type', function ($query) {
@@ -162,7 +206,7 @@ class ReportRepository implements ReportRepositoryInterface{
         
         $gross_profit = $turnover - ($cogs + $cogs_exp);
 
-        $total_expenditure = $opex + $marketing_cost + $cogs + $cogs_exp + $monthly_depreciation;
+        $total_expenditure = $opex + $marketing_cost + $salaries + $utilities + $cogs + $cogs_exp + $monthly_depreciation;
         $net_profit = $turnover - $total_expenditure;
         $gross_profit_margin = $turnover > 0 ? ($gross_profit/$turnover) * 100 :0;
         $net_profit_margin = $turnover > 0 ? ($net_profit/$turnover) * 100 : 0;
@@ -199,7 +243,38 @@ class ReportRepository implements ReportRepositoryInterface{
                             ->sum('budget_amount');
         $budgeted_expenditure = applyShopFilter(Budget::where('budget_type', 'expenditure')->whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date]), $shopId)
         ->sum('budget_amount');
+        
+        // Quadrant	Primary Heads
+        // Assets	Cash, Bank, Receivables, Inventory, Equipment
+        // Liabilities	Payables, Loans, Tax Liabilities
+        // Equity	Capital, Retained Earnings, Drawings
+        // Income/Expenses	Sales, COGS, Salaries, Utilities
 
+        $bs_assets = [
+            'cash' => $cash,
+            'bank'=> $bank,
+            'receivables' => $receivables_within_period,
+            'inventory' => $invetory,
+            'equipment' => $assets,
+        ];
+
+        $liabilities = [
+            'payables' => $payables,
+            'loans' => 0, // Assuming you have a way to calculate loans
+            'tax_liabilities' => 0, // Assuming you have a way to calculate tax liabilities
+        ];
+
+        $equity = [
+            'capital' => ($cash + $receivables_within_period + $invetory) - $payables,
+            'retained_earnings' => $net_profit,
+            'drawings' => 0, // Assuming you have a way to calculate drawings
+        ];
+
+        $income_expenses = [
+            'sales' => $turnover,
+            'cogs' => $cogs,
+            'salaries_utilities' => $salaries + $utilities, // Assuming you have a way to calculate salaries
+        ];
 
         $report = [
             "report"=> [
@@ -213,7 +288,7 @@ class ReportRepository implements ReportRepositoryInterface{
                   "total_expenditure"=> $total_expenditure,
                   "gross_profit"=> $gross_profit,
                   "net_profit"=> $net_profit,
-                  "ebit"=> $turnover - ($opex + $marketing_cost),
+                  "ebit"=> $turnover - ($opex + $marketing_cost + $salaries + $utilities),
                   "roi"=> $total_expenditure > 0 ? ($net_profit / $total_expenditure) * 100 : 0,
                   "profit_margin"=> $net_profit_margin
                 ]
@@ -221,28 +296,27 @@ class ReportRepository implements ReportRepositoryInterface{
               "revenue"=> [
                 "total_revenue"=> $turnover,
                 "sales_by_product"=> $sales_by_product,
-                
                 "kpi"=> [
                   "average_sales_per_customer"=> $turnover/$customers,
                   "customer_acquisition_cost"=> $marketing_cost + $opex / $customers,
-                
                 ]
               ],
               "expenditure"=> [
                 "total_expenditure"=> $total_expenditure,
                 "cost_of_goods_sold"=> $cogs,
-                "operating_expenses"=> $opex,
+                "operating_expenses"=> $opex + $salaries + $utilities + $marketing_cost,
                 "expenditure_details"=> applyShopFilter(Expenditure::whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date])
-                ->with('type')->with('user'), $shopId)->get() ,
+                ->with('type')->with('user'), $shopId)->get(),
                 "purchase_details" => $purchase_details
-
               ],
-              "profit_margin"=> [
-                "gross_profit_margin"=> $gross_profit_margin,
-                "operating_profit_margin"=> $operating_profit_margin,
-                "net_profit_margin"=> $net_profit_margin
+              "profit_loss_statement"=> [
+                "revenue"=> $turnover,
+                "cost_of_goods_sold"=> $cogs,
+                "gross_profit"=> $gross_profit,
+                "operating_expenses"=> $opex + $salaries + $utilities + $marketing_cost,
+                "operating_profit"=> $operating_profit,
+                "net_profit"=> $net_profit
               ],
-
               "receivables"=> [
                 "total_receivables"=> $receivables_within_period,
                 "receivable_details"=> $receivables_within_period_details,
@@ -251,15 +325,23 @@ class ReportRepository implements ReportRepositoryInterface{
                 "purchases_part_credit"=> $purchases_part_credit,
                 "purchases_part_payment"=> $purchases_part_payment
               ],
-           
+              "stock_movement"=> [
+                "stock_sold"=> $stock_sold,
+                "stock_adjustments"=> $stock_adjustments,
+                "negative_stock"=> $negative_stock_value
+              ],
+              "cash_flow"=> [
+                "cash_inflow"=> $cash_inflow,
+                "cash_outflow"=> $cash_outflow
+              ],
               "balance_sheet"=> [
                 "assets"=> [
                   "current_assets"=> [
-                    "cash"=> $total_cash,
+                    "cash"=> $cash,
+                    "bank"=> $bank,
                     "accounts_receivable"=> $receivables_within_period,
-                    "inventory"=> $invetory,
+                    "inventory"=> $inventory_value,
                   ],
-
                 ],
                 "liabilities"=> [
                   "current_liabilities"=> [
@@ -267,16 +349,18 @@ class ReportRepository implements ReportRepositoryInterface{
                     "liability_details" => $payable_details
                   ],
                 ],
+                "equity"=> [
+                  'owner_equity' => ($cash + $receivables_within_period + $inventory_value) - $payables,
+                  "retained_earnings"=> $net_profit,
+                ],
               ],
               "logistics_break_down"=> [
-                  "revenue"=> $logistics,
-                  "expenditure"=> $logistics_expenditure
-                ],
-                
-                "sales_vs_marketing_expenditure"=> [
-                  "sales_expenditure"=> $cogs,
-                  "marketing_expenditure"=> $marketing_cost
-                ]
+                "revenue"=> $logistics,
+                "expenditure"=> $logistics_expenditure
+              ],
+              "sales_vs_marketing_expenditure"=> [
+                "sales_expenditure"=> $cogs,
+                "marketing_expenditure"=> $marketing_cost
               ],
               "budget_vs_actual"=> [
                 "budgeted_revenue"=> $budgeted_revenue,
@@ -286,8 +370,26 @@ class ReportRepository implements ReportRepositoryInterface{
                 "actual_expenditure"=> $total_expenditure,
                 "expenditure_variance"=> $total_expenditure - $budgeted_expenditure,
               ],
-
-        ];
+              "marketing_details"=> [
+                "total_campaign_spend"=> $marketing_cost,
+                "customer_acquisition_cost"=> $marketing_cost / $new_customers,
+                "return_on_investment"=> $marketing_revenue / $marketing_cost
+              ],
+              "receivables_ageing"=> [
+                "0_30_days"=> $receivables_30_days,
+                "31_60_days"=> $receivables_60_days,
+                "61_90_days"=> $receivables_90_days,
+                "over_90_days"=> $receivables_over_90_days
+              ],
+              "payables_ageing"=> [
+                "0_30_days"=> $payables_30_days,
+                "31_60_days"=> $payables_60_days,
+                "61_90_days"=> $payables_90_days,
+                "over_90_days"=> $payables_over_90_days
+              ]
+            ]
+          ];
+          
 
         return res_success('report generated', $report);
           

@@ -17,7 +17,7 @@ class CreateSplitPaymentsTable extends Migration
         Schema::create('split_payments', function (Blueprint $table) {
             $table->id();
             $table->integer('transaction_id');
-            $table->enum('payment_method', ['cash', 'transfer', 'card',]);
+            $table->enum('payment_method', ['cash', 'transfer', 'card','pos']);
             $table->float('amount', 11, 2);
             $table->integer('bank_id')->nullable();
             $table->timestamps();

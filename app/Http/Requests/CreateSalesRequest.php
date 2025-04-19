@@ -46,7 +46,10 @@ class CreateSalesRequest extends FormRequest
             'part_payment_amount' => 'sometimes',
             'discount' => 'sometimes',
             'vat' => 'sometimes',
-            'logistics' => 'sometimes'
+            'logistics' => 'sometimes',
+            'type' => 'required',
+            'is_split_payment' => "required",
+            'split' => 'sometimes'
         ];
     }
 }

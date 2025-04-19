@@ -83,10 +83,12 @@ class ExpenditureController extends Controller
                 'user_id' => Auth::user()->id,
                 'shop_id' => $shopId
             ]);
+            $expenditure = ExpenditureType::findOrFail($request['expenditure_type_id']);
+
+
 
             // if expenditure is logistics deduct from logistics account
-            $expenditure = ExpenditureType::findOrFail($request['expenditure_type_id']);
-            if($expenditure->name == "logistics" || $expenditure->name == "Logistics"){
+            if($expenditure->expenditure_type == "logistics"){
                 $previous_balance = LogisticsAccount::get()->last()->current_balance ?? 0;
                 $current_balance = $previous_balance - intval($request['amount']);
                 LogisticsAccount::create([
@@ -175,6 +177,7 @@ class ExpenditureController extends Controller
         $expenditure = Expenditure::find($id);
         $shopId = request()->query('shop_id');
         $request["payment_status"] = "not_paid";
+        $type = ExpenditureType::find($expenditure->expenditure_type_id);
 
         if($request["payment_method"] == 'part_payment') {
             $request["payment_status"] = "not_paid";
@@ -218,7 +221,15 @@ class ExpenditureController extends Controller
                 );
             }
         }
-        
+        registerLedger(
+            'purchases', 
+            $type->expenditure_type,
+            $expenditure['amount'],
+            $expenditure->id, 
+            $shopId, 
+            0, 
+            $request['payment_method'], 
+            $request['part_payment_amount'] ?? 0);
         return res_completed('updated');
 
     }
