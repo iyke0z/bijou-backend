@@ -515,10 +515,10 @@ class ReportController extends Controller
             return res_success('succes', $payable);
     }
 
-    public function downloadReport(Request $request){
+    public function getReceivables(Request $request){
 
-        return $this->reportRepo->downloadReport($request->all());
     }
+    
     public function getCogs(Request $request){
         $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
         $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
@@ -596,26 +596,8 @@ class ReportController extends Controller
     }
     public function getProfitLoss(Request $request){
         $shopId = request()->query('shop_id');
-        // const turnover = computed(() => {
-        //     const data = monthlyData[selectedMonth.value];
-      
-        //     return (
-        //       data.revenue + data.cloud + data.other_income + data.infracoLegend + data.infracoMinna + data.installationCost + data.new_customers - ((data.breachLegend/100)*data.infracoLegend)
-              
-        //     );
-        //   });
-      
-        //   const cogs = computed(() => monthlyData[selectedMonth.value].cogs);
-        //   const opex = computed(() => monthlyData[selectedMonth.value].opex);
-        //   const grossProfit = computed(() => turnover.value - cogs.value);
-        //   const totalExpenditure = computed(() => opex.value + depreciation.value + interest.value);
-        //   const netProfit = computed(() => grossProfit.value - totalExpenditure.value);
-      
-        //   const grossProfitMargin = computed(() => (grossProfit.value / turnover.value) * 100);
-        //   const netMargin = computed(() => (netProfit.value / turnover.value) * 100);
         $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
         $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
-
         $validated = Validator::make($request->all(), [
             'start_date' => 'required',
             'end_date' => 'required'
@@ -739,7 +721,11 @@ class ReportController extends Controller
         }
         return res_success('amount', 0);
     }
+    
+    public function downloadReport(Request $request){
 
+        return $this->reportRepo->downloadReport($request->all());
+    }
     public function getBankStatement(Request $request){
         $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $this->opening_time;
         $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $this->closing_time;
