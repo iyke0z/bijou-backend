@@ -213,6 +213,7 @@ public function getLogisticsExpenditure($start_date, $end_date, $shopId)
                 'account_name' => $entry->account_name,
                 'amount' => $entry->amount,
                 'description' => $entry->description ?? '',
+                'transaction_id' => $entry->transaction_id ?? '',
                 'transaction_type' => $entry->transaction_type,
                 'date' => $entry->created_at->format('Y-m-d H:i:s'),
             ];
