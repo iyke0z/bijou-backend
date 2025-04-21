@@ -1,8 +1,10 @@
 <?php
 
 use App\Models\BusinessTime;
+use App\Models\Category;
 use App\Models\GeneralLedger;
 use App\Models\Liquidity;
+use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseDetails;
 use Illuminate\Support\Facades\Log;
@@ -240,11 +242,20 @@ if (!function_exists('bankService')) {
     }
 
         if (!function_exists('getCostPrice')) {
-            function getCostPrice($product_id){
-                $costPrice = PurchaseDetails::where('product_id', $product_id)->orderBy('created_at', 'desc' )->first();
-                return $costPrice->qty * $costPrice->cost;
+            function getCostPrice($product_id, $qty){
+                // check if the product has no cost price return zo cost price
+                $product = Product::find($product_id);
+                $categoryDetails = Category::where('id', $product->category_id)->first();
+                if ($categoryDetails->has_stock == 1) {
+                    $costPrice = PurchaseDetails::where('product_id', $product_id)->orderBy('created_at', 'desc' )->first();
+                    return $costPrice->cost * $qty;
+                }else{
+                    return 0;
+                }
+                
             }
         }
+        
         if (!function_exists('registerLedger')) {
             function registerLedger($activity, $transaction_id, $amount, $shopId, $payment_type, $payment_method = null, $logistics = 0, $partial_payment = 0, $cost_price = null, $expense_account = 'opex')
             {

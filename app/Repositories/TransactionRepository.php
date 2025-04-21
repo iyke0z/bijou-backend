@@ -118,7 +118,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
                 }
             
                 $afterStock = $product->stock;
-                $costPrice = getCostPrice($productData["product_id"]);
+                $costPrice = getCostPrice($productData["product_id"], $productData["qty"]); //if the product does not have_Stock, cost price is zero, and do not debit inventory
                 $totalCost += $costPrice;
             
                 $sale = new Sale();
