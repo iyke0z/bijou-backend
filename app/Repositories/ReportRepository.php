@@ -105,7 +105,7 @@ public function getLogisticsExpenditure($start_date, $end_date, $shopId)
         $ledger = applyShopFilter(GeneralLedger::whereBetween('created_at', [$start_date, $end_date]), $shopId)->get();
 
         // Initialize variables for calculations
-        $turnover = 0;
+        $turnover = ;
         $total_expenditure = 0;
         $cogs = 0;
         $gross_profit = 0;
@@ -273,6 +273,9 @@ public function getLogisticsExpenditure($start_date, $end_date, $shopId)
         $depreciation = 0;
         $amortization = 0;
 
+        if($turnover == 0){
+            $turnover = 0.01; // Avoid division by zero in ROI calculation
+        }
         // Build the report structure
         $report = [
             "summary" => [

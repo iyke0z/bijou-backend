@@ -49,7 +49,13 @@ class CreateSalesRequest extends FormRequest
             'logistics' => 'sometimes',
             'type' => 'required',
             'is_split_payment' => "required",
-            'split' => 'sometimes'
+            'split' => 'sometimes',
+            
+            'start_date' => 'sometimes',
+            'end_date' => 'sometimes',
+            'payment_type' => 'sometimes',
+            'monthly_value' => 'sometimes',
+            'posting_day' => 'sometimes',
         ];
     }
 }

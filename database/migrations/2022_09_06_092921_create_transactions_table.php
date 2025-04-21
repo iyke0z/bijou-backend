@@ -15,11 +15,11 @@ class CreateTransactionsTable extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
-            $table->enum('type', ['full_payment', 'on_credit', "complementary", "part_payment"])->nullable();
+            $table->string('type')->nullable()->default('full_payment');
             $table->float('amount', 11 ,2)->default(0);
-        $table->integer('customer_id')->nullable();
+            $table->integer('customer_id')->nullable();
             $table->enum('platform', ['online','offline'])->default('offline');
-            $table->enum('payment_method', ['cash', 'transfer', 'card', 'wallet', 'pos'])->nullable();
+            $table->string('payment_method')->nullable(); //['cash', 'transfer', 'card', 'wallet', 'pos']
             $table->string('table_description')->nullable();
             $table->integer('bank_id')->nullable();
             $table->integer('user_id');

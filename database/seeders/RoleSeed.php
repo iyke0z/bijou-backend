@@ -14,7 +14,7 @@ class RoleSeed extends Seeder
      */
     public function run()
     {
-        $dat =  ['Super Admin', 'Cashier', 'Waiter', 'Bar-Man'];
+        $dat =  ['Super Admin', 'Accountant', 'Sales Admin', 'Expenditure Manager'];
 
         for ($i=0; $i < count($dat) ; $i++) {
             $name = [

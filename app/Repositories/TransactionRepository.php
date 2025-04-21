@@ -178,6 +178,30 @@ class TransactionRepository implements TransactionRepositoryInterface{
                 $customer->wallet_balance = $customer->wallet_balance - $request["amount"];
                 $customer->save();
             }
+
+            if($request['type'] == "accrual"){
+                // update transaction
+                $transaction->amount = $request["amount"];
+                $transaction->start_dat = $request["start_date"];
+                $transaction->end_date = $request["end_date"];
+                $transaction->payment_type = $request["payment_type"];
+                $transaction->monthly_value = $request["monthly_value"];
+                $transaction->posting_day = $request["posting_day"];
+                $transaction->save();
+                // register ledger
+                registerLedger(
+                    'sales',
+                    'sales_'.$transaction->id,
+                    $request['amount'],
+                    $shopId,
+                    $request['type'],
+                    $request['payment_method'],
+                    $request['logistics'] ?? 0,
+                    0, // part_payment_amount (already handled)
+                    $totalCost
+                );
+
+            }
             
             if($request['type'] == "part_payment"){
                 $customer = Customer::find($request["customer_id"]);

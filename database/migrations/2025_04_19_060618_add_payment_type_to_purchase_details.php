@@ -14,7 +14,7 @@ class AddPaymentTypeToPurchaseDetails extends Migration
     public function up()
     {
         Schema::table('purchase_details', function (Blueprint $table) {
-            $table->enum('type', ['full_payment', 'on_credit', "complementary", "part_payment"]);
+            $table->string('type')->default('full_payment');
             $table->boolean('is_split_payment')->default(false);            
         });
     }
