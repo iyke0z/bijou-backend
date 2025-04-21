@@ -257,7 +257,7 @@ if (!function_exists('bankService')) {
         }
         
         if (!function_exists('registerLedger')) {
-            function registerLedger($activity, $transaction_id, $amount, $shopId, $payment_type, $payment_method = null, $logistics = 0, $partial_payment = 0, $cost_price = null, $expense_account = 'opex')
+            function registerLedger($activity, $transaction_id, $amount, $shopId, $payment_type, $payment_method = null, $logistics = 0, $partial_payment = 0, $cost_price = null, $expense_account = 'opex', $accrual = null)
             {
                 // SALES TRANSACTION
                 if ($activity === 'sales') {

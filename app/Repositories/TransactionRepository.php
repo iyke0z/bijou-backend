@@ -179,7 +179,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
                 $customer->save();
             }
 
-            if($request['type'] == "accrual"){
+            if($request['is_prepayment']  == 1 || $request['is_postpayment'] == 1){
                 // update transaction
                 $transaction->amount = $request["amount"];
                 $transaction->start_dat = $request["start_date"];
@@ -188,6 +188,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
                 $transaction->monthly_value = $request["monthly_value"];
                 $transaction->posting_day = $request["posting_day"];
                 $transaction->save();
+
                 // register ledger
                 registerLedger(
                     'sales',
@@ -198,7 +199,9 @@ class TransactionRepository implements TransactionRepositoryInterface{
                     $request['payment_method'],
                     $request['logistics'] ?? 0,
                     0, // part_payment_amount (already handled)
-                    $totalCost
+                    $totalCost,
+                    null,
+                    $request['is_prepayment'] == 1 ? 'prepayment' : 'postpayment'
                 );
 
             }
