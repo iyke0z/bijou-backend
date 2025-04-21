@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Purchase;
 use Closure;
 use Illuminate\Http\Request;
 
@@ -17,38 +18,78 @@ class CheckPackagePlan
 
         // Define the package limits for both monthly and annual packages
         $packageLimits = [
-            1 => [  // Free Trial (7 days)
+            1 => [  // Free Trial
                 'users' => 2,
-                'shops' => 1,
-                'roles' => 3,
-                'categories' => 2,
-                'products' => 10,
+                'shops' => 2,
+                'roles' => 5,
+                'categories' => 5,
+                'products' => 50,
                 'transactions' => 50,
                 'expenditures' => 100,
                 'customers' => 2,
             ],
-            2 => [  // Starter (7 days, Monthly)
+            2 => [  // Startup Lite monthly
                 'users' => 5,
-                'shops' => 1,
-                'roles' => 3,
-                'categories' => 3,
-                'products' => 300,
-                'transactions' => 800,
-                'expenditures' => 600,
-                'customers' => 5,
+                'shops' => 2,
+                'roles' => 5,
+                'categories' => 5,
+                'products' => 150,
+                'transactions' => 500,
+                'expenditures' => 300,
+                'customers' => 10,
             ],
-            3 => [  // Professional (30 days, Monthly)
+            3 => [  // Startup Lite annual
+                'users' => 5,
+                'shops' => 2,
+                'roles' => 5,
+                'categories' => 5,
+                'products' => 150,
+                'transactions' => 500  * 2,
+                'expenditures' => 300  * 2,
+                'customers' => 10  * 2,
+            ],
+            4 => [  // Standard Monthly
+                'users' => 5,
+                'shops' => 5,
+                'roles' => 5,
+                'categories' => 5,
+                'products' => 300,
+                'transactions' => 2500,
+                'expenditures' => 600,
+                'customers' => 50,
+            ],
+            5 => [  // Standard Anual
+                'users' => 5,
+                'shops' => 5,
+                'roles' => 5,
+                'categories' => 5,
+                'products' => 300,
+                'transactions' => 2500 * 2,
+                'expenditures' => 600 * 2,
+                'customers' => 50 * 2,
+            ],
+            6 => [  // Professional
                 'users' => 10,
                 'shops' => 5,
                 'roles' => 5,
                 'categories' => 15,
                 'products' => 500,
-                'transactions' => 2000,
+                'transactions' => 5000,
                 'expenditures' => 1000,
-                'customers' => 15,
+                'customers' => 600,
             ],
-            4 => [  // Enterprise (30 days, Monthly)
-                'users' => PHP_INT_MAX,  // Unlimited
+            7 => [  // Professional
+                'users' => 10,
+                'shops' => 5,
+                'roles' => 5,
+                'categories' => 15,
+                'products' => 500,
+                'transactions' => 5000 * 2,
+                'expenditures' => 1000 * 2,
+                'customers' => 600 * 2,
+            ],
+            8 => [  // Enterprise
+                'users' => PHP_INT_MAX,
                 'shops' => PHP_INT_MAX,
                 'roles' => PHP_INT_MAX,
                 'categories' => PHP_INT_MAX,
@@ -57,28 +98,8 @@ class CheckPackagePlan
                 'expenditures' => PHP_INT_MAX,
                 'customers' => PHP_INT_MAX,
             ],
-            5 => [  // Starter (Annual)
-                'users' => 5,
-                'shops' => 1,
-                'roles' => 3,
-                'categories' => 3,
-                'products' => 300,
-                'transactions' => 800,
-                'expenditures' => 600,
-                'customers' => 5,
-            ],
-            6 => [  // Professional (Annual)
-                'users' => 10,
-                'shops' => 5,
-                'roles' => 5,
-                'categories' => 15,
-                'products' => 500,
-                'transactions' => 2000,
-                'expenditures' => 1000,
-                'customers' => 15,
-            ],
-            7 => [  // Enterprise (Annual)
-                'users' => PHP_INT_MAX,  // Unlimited
+            9 => [  // Enterprise
+                'users' => PHP_INT_MAX,
                 'shops' => PHP_INT_MAX,
                 'roles' => PHP_INT_MAX,
                 'categories' => PHP_INT_MAX,
@@ -88,6 +109,7 @@ class CheckPackagePlan
                 'customers' => PHP_INT_MAX,
             ],
         ];
+        
 
         $limits = $packageLimits[$packageId] ??  $packageLimits[1];
         // Get the current usage for specific entities based on the action being performed
@@ -102,7 +124,7 @@ class CheckPackagePlan
                 'categories' => \App\Models\Category::count(),
                 'products' => \App\Models\Product::count(),
                 'transactions' => \App\Models\Transaction::count(),
-                'expenditures' => \App\Models\Expenditure::count(),
+                'expenditures' => \App\Models\Expenditure::count() + Purchase::count(),
                 'customers' => \App\Models\Customer::count(),
             ];
         }
