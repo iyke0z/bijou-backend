@@ -156,6 +156,7 @@ Route::prefix('v1')->group(function (){
             Route::post('/today', [TransactionController::class, 'sales_report_today'])->middleware('IaActive');
             Route::patch('/verify/pod', [TransactionController::class, 'payondelivery'])->middleware('IaActive');
             Route::patch('/verify/poc', [TransactionController::class, 'payoncredit'])->middleware('IaActive');
+            Route::post('/update/{id}', [TransactionController::class, 'updateSales'])->middleware('IaActive');
         });
 
         Route::prefix('business')->group(function (){

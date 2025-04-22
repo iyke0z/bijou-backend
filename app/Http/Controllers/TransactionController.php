@@ -17,6 +17,7 @@ use App\Models\Customer;
 use App\Models\Discount;
 use App\Models\Sale;
 use App\Models\Sales;
+use App\Models\SplitPayments;
 use App\Models\Transaction;
 use App\Models\WaiterCode;
 use App\Traits\CheckoutTrait;
@@ -195,5 +196,133 @@ class TransactionController extends Controller
         $validated = $request->validated();
 
         return $this->transRepo->update_prep_status($validated);
+    }
+
+    public function updateSales(Request $request, $id){
+        $transaction = Transaction::where('id', $id)->first();
+        $shopId = request()->query('shop_id');
+        $request["payment_status"] = "not_paid";
+
+        if($request["type"] == 'part_payment') {
+            $request["payment_status"] = "not_paid";
+        }else if($request["type"] == 'on_credit') {
+            $request["payment_status"] = "not_paid";
+        }else{
+            $request["payment_status"] = "paid";
+        }
+
+        if ($transaction) {
+            $transaction->update([
+                "payment_method" => $request["payment_method"],
+                "payment_status" => $request["payment_status"],
+                "part_payment_amount" => $request["part_payment_amount"],
+                "type" => $request["type"],
+            ]);
+
+            if ($request["payment_status"] == 'paid') {
+                bankService(
+                    $transaction['amount'] * $transaction['qty'], 
+                    "SALES - PAID",
+                    $transaction->id,
+                    $shopId,
+                    "CREDIT"
+                );
+            }else if ($request['type'] == 'part_payment') {
+                bankService(
+                    $request['part_payment_amount'], 
+                    "SALES - PART PAYMENT",
+                    $transaction->ID,
+                    $shopId,
+                    "CREDIT"
+                );
+            }else{
+                bankService(
+                    $transaction['amount'] * $transaction['qty'], 
+                    "EXPENDITURE COGS - CREDIT",
+                    $transaction->id,
+                    $shopId,
+                    "CREDIT"
+                );
+            }
+            //split payments
+            if ($request['is_split_payment'] == 1) {
+                foreach ($request["split"] as $split) {
+                    // store split values
+                    $split_payment = new SplitPayments();
+                    $split_payment->transaction_id = $transaction->id;
+                    $split_payment->payment_method = $split["split_playment_method"];
+                    $split_payment->amount = $split["split_payment_amount"];                    
+                    $split_payment->shop_id = $shopId;
+                    $split_payment->transaction_type = 'sales';
+                    $split_payment->save();
+                    
+                    
+                    registerLedger(
+                        'sales', 
+                        "sales_".$transaction->id, 
+                        floatval($split['split_payment_amount']),  //$shopId
+                        $shopId, 
+                        $request['type'], 
+                        $request['payment_method'], 
+                        $transaction['logistics']['amount'] ?? 0,
+                        floatval($split['split_playment_method']),
+                        0
+                    );
+                }
+            }
+            // part payment
+            else if($request['type'] == 'part_payment') {                    
+                    registerLedger(
+                        'sales', 
+                        "sales_".$transaction->id, 
+                        $transaction['amount'],  //$shopId
+                        $shopId, 
+                        $request['type'], 
+                        $request['payment_method'], 
+                        $transaction['logistics']['amount'] ?? 0,
+                        floatval($request['part_payment_amount']),
+                        0
+                    );
+            } else if($request['payment_type']  == 'prepayment' || $request['payment_type'] == 'postpayment'){
+                // update transaction
+                $transaction->start_date = $request["start_date"];
+                $transaction->end_date = $request["end_date"];
+                $transaction->payment_type = $request["payment_type"];
+                $transaction->monthly_value = $transaction->amount/Carbon::parse($request['start_date'])->diffInMonths(Carbon::parse($request['end_date']));
+                $transaction->posting_day = $request["posting_day"];
+                $transaction->save();
+
+                // register ledger
+                registerLedger(
+                    'sales',
+                    'sales_'.$transaction->id,
+                    $transaction['amount'],
+                    $shopId,
+                    $request['payment_type'],
+                    $request['payment_method'],
+                    $transaction['logistics']['amount'] ?? 0,
+                    0, // part_payment_amount (already handled)
+                    0,
+                );
+
+            }else {
+                registerLedger(
+                    'sales', 
+                    "sales_".$transaction->id, 
+                    $transaction['amount'],  //$shopId
+                    $shopId, 
+                    $request['type'], 
+                    $request['payment_method'], 
+                    $transaction['logistics']['amount'] ?? 0,
+                    floatval($request['part_payment_amount']),
+                    0
+                );
+
+            }
+            
+            
+        }
+
+        return res_completed('updated');
     }
 }

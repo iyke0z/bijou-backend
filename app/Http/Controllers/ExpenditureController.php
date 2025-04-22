@@ -11,6 +11,7 @@ use App\Models\ExpenditureDetails;
 use App\Models\ExpenditureSupportingDocument;
 use App\Models\LogisticsAccount;
 use App\Models\SplitPayments;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -276,6 +277,31 @@ class ExpenditureController extends Controller
     
                     );
                
+            }
+            else if($request['payment_type']  == 'prepayment' || $request['payment_type'] == 'postpayment'){
+                // update transaction
+                $epxenditure = Expenditure::where('id', $expenditure->id)->first();
+                $epxenditure->start_date = $request["start_date"];
+                $epxenditure->end_date = $request["end_date"];
+                $epxenditure->payment_type = $request["payment_type"];
+                $epxenditure->monthly_value = $expenditure['amount']/Carbon::parse($request['start_date'])->diffInMonths(Carbon::parse($request['end_date']));
+                $epxenditure->posting_day = $request["posting_day"];
+                $epxenditure->save();
+
+                // register ledger
+                registerLedger(
+                    'expenditure',
+                    'exp_'.$epxenditure->id,
+                    $expenditure['amount'],
+                    $shopId,
+                    $request['payment_type'],
+                    $request['payment_method'],
+                    $request['logistics'] ?? 0,
+                    0, // part_payment_amount (already handled)
+                    0,
+                    $type->expenditure_type,
+                );
+
             }else{
                     registerLedger(
                         'expenditure', 

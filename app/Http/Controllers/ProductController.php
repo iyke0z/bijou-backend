@@ -18,6 +18,7 @@ use App\Models\Purchase;
 use App\Models\PurchaseDetails;
 use App\Models\PurchaseSupportingDocument;
 use App\Models\SplitPayments;
+use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -197,7 +198,7 @@ class ProductController extends Controller
                         $request['payment_method'], 
                         0, 
                         floatval($split['split_playment_method']),
-                        getCostPrice($purchase_detail["product_id"], $request['qty'])
+                        getCostPrice($purchase_detail["product_id"], $purchase_detail['qty'])
                     );
                 }
             }
@@ -214,6 +215,29 @@ class ProductController extends Controller
                         floatval($request['part_payment_amount']),
                         getCostPrice($purchase_detail["product_id"], $request['qty'])
                     );
+            } else if($request['payment_type']  == 'prepayment' || $request['payment_type'] == 'postpayment'){
+                // update transaction
+                $purchase_detail = PurchaseDetails::where('id', $purchase_detail->id)->first();
+                $purchase_detail->start_date = $request["start_date"];
+                $purchase_detail->end_date = $request["end_date"];
+                $purchase_detail->payment_type = $request["payment_type"];
+                $purchase_detail->monthly_value = (($added_cost/$purchase_detailCount)  + $purchase_detail['cost'] * $purchase_detail['qty'])/Carbon::parse($request['start_date'])->diffInMonths(Carbon::parse($request['end_date']));
+                $purchase_detail->posting_day = $request["posting_day"];
+                $purchase_detail->save();
+
+                // register ledger
+                registerLedger(
+                    'purchase',
+                    'purch_'.$purchase_detail->id,
+                    ($added_cost/$purchase_detailCount)  + $purchase_detail['cost'] * $purchase_detail['qty'] ,
+                    $shopId,
+                    $request['payment_type'],
+                    $request['payment_method'],
+                    $request['logistics'] ?? 0,
+                    0, // part_payment_amount (already handled)
+                    getCostPrice($purchase_detail["product_id"], $purchase_detail['qty']),
+                );
+
             }else {
                 registerLedger(
                     'purchase', 
@@ -224,7 +248,7 @@ class ProductController extends Controller
                     $request['payment_method'], 
                     0, 
                     floatval($request['part_payment_amount']),
-                    getCostPrice($purchase_detail["product_id"], $request['qty'])
+                    getCostPrice($purchase_detail["product_id"], $purchase_detail['qty'])
                 );
 
             }

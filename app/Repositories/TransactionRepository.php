@@ -170,7 +170,6 @@ class TransactionRepository implements TransactionRepositoryInterface{
             else if($request['payment_type']  == 'prepayment' || $request['payment_type'] == 'postpayment'){
                 // update transaction
                 $transaction = Transaction::where('id', $transaction->id)->first();
-                $transaction->amount = $request["amount"];
                 $transaction->start_date = $request["start_date"];
                 $transaction->end_date = $request["end_date"];
                 $transaction->payment_type = $request["payment_type"];

@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class AddAccrualOptionsToTransaction extends Migration
+class AddAccrualOptionsToPurchases extends Migration
 {
     /**
      * Run the migrations.
@@ -13,7 +13,7 @@ class AddAccrualOptionsToTransaction extends Migration
      */
     public function up()
     {
-        Schema::table('transactions', function (Blueprint $table) {
+        Schema::table('purchase_details', function (Blueprint $table) {
             $table->string('start_date')->nullable();
             $table->string('end_date')->nullable();
             $table->string('payment_type')->nullable(); //prepayment_postpayment
@@ -29,7 +29,7 @@ class AddAccrualOptionsToTransaction extends Migration
      */
     public function down()
     {
-        Schema::table('transactions', function (Blueprint $table) {
+        Schema::table('purchase_details', function (Blueprint $table) {
             $table->dropColumn('start_date');
             $table->dropColumn('end_date'); 
             $table->dropColumn('payment_type');
