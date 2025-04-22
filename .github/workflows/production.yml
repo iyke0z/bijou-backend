@@ -17,7 +17,7 @@ jobs:
       - name: Identify Changed Folders
         id: detect-changes
         run: |
-          CHANGED_FOLDERS=$(git diff --dirstat=files,0 HEAD^ HEAD | cut -d'/' -f1 | sort -u | grep -E 'amasemporium|bingoml|edzain|ugbommaintefarms|dreambarbers|24hrs' || echo "")
+          CHANGED_FOLDERS=$(git diff --dirstat=files,0 HEAD^ HEAD | cut -d'/' -f1 | sort -u | grep -E 'amasemporium|bingoml|edzain|ugbommaintefarms|dreambarbers|24hrs|flexglobalprime|munchiesevents|dami' || echo "")
           echo "CHANGED_FOLDERS=$CHANGED_FOLDERS" >> $GITHUB_ENV
           if [ -z "$CHANGED_FOLDERS" ]; then
             echo "No changes detected. Skipping deployment."
@@ -251,7 +251,7 @@ jobs:
           target: ${{ secrets.FTP_PATH }}/business_sites/24hrs/api/  # Target directory on the server
           port: 22
           
-      - name: Run PHP Artisan Command on 24hrs/api
+      - name: Run PHP Artisan Command on flexglobalprime/api
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.FTP_HOST }}          # Server hostname
@@ -259,9 +259,33 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}  # SSH password
           port: 22                               # SSH port
           script: |
-            cd /home/ngmktsit/www/business_sites/24hrs/api  # Navigate to the second folder
-            php artisan migrate
+            cd /home/ngmktsit/www/business_sites/flexglobalprime/api  # Navigate to the second folder
             php artisan clean
+            php artisan migrate
+          
+      - name: Run PHP Artisan Command on munchiesevents/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/business_sites/munchiesevents/api  # Navigate to the second folder
+            php artisan clean
+            php artisan migrate
+
+      - name: Run PHP Artisan Command on dami/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/business_sites/dami/api  # Navigate to the second folder
+            php artisan clean
+            php artisan migrate
 
       # - name: Run PHP Artisan Command on jtsforte/api
       #   uses: appleboy/ssh-action@v0.1.6
