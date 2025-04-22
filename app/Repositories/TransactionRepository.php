@@ -86,12 +86,10 @@ class TransactionRepository implements TransactionRepositoryInterface{
             $transaction->save();
 
             // register ledger
-           
-
 
             // if logistics is greater than 0, transfer to logistics account
             if($request['logistics'] > 0){
-                $previous_balance = LogisticsAccount::get()->last()->current_balancee;
+                $previous_balance = LogisticsAccount::get()->last()->current_balancee ?? 0;
                 $current_balance = $previous_balance + intval($request['logistics']);
                 LogisticsAccount::create([
                     "transaction_id" => $transaction->id,
@@ -159,17 +157,30 @@ class TransactionRepository implements TransactionRepositoryInterface{
                         $totalCost
                     );
                 }
-            } 
+            } else {
+                registerLedger(
+                    $isNegativeStock ? 'negative_stock' : 'sales',
+                    'sales_'.$transaction->id,
+                    $request['amount'],
+                    $shopId,
+                    $request['type'],
+                    $request['payment_method'],
+                    $request['logistics'] ?? 0,
+                    $request['part_payment_amount'] ?? 0,
+                    $totalCost
+                );
+            }
             
-            else if($request['payment_method'] == "wallet" || $request['type'] == 'on_credit'){
+            if($request['payment_method'] == "wallet" || $request['type'] == 'on_credit'){
                 $customer = Customer::find($request["customer_id"]);
                 $customer->wallet_balance = $customer->wallet_balance - $request["amount"];
                 $customer->save();
             }
 
-            else if($request['payment_type']  == 'prepayment' || $request['payment_type'] == 'postpayment'){
+            if($request['payment_type']  == 'prepayment' || $request['payment_type'] == 'postpayment'){
                 // update transaction
                 $transaction = Transaction::where('id', $transaction->id)->first();
+                $transaction->amount = $request["amount"];
                 $transaction->start_date = $request["start_date"];
                 $transaction->end_date = $request["end_date"];
                 $transaction->payment_type = $request["payment_type"];
@@ -192,7 +203,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
 
             }
             
-            else if($request['type'] == "part_payment"){
+            if($request['type'] == "part_payment"){
                 $customer = Customer::find($request["customer_id"]);
                 $customer->wallet_balance = $customer->wallet_balance - ($request["amount"] - $request["part_payment_amount"]);
                 $customer->save();
@@ -206,25 +217,13 @@ class TransactionRepository implements TransactionRepositoryInterface{
                 );
             }
 
-            else if( $request['is_order'] == false && $request['type'] == "on_credit" || $request['type'] != 'part_payment_amount') {
+            if ( $request['is_order'] == false && $request['type'] == "on_credit" || $request['type'] != 'part_payment_amount') {
                 bankService(
                     $request['amount'], 
                     "SALES", 
                     $transaction->id,
                     $shopId,
                     "CREDIT"
-                );
-            } else {
-                registerLedger(
-                    $isNegativeStock ? 'negative_stock' : 'sales',
-                    'sales_'.$transaction->id,
-                    $request['amount'],
-                    $shopId,
-                    $request['type'],
-                    $request['payment_method'],
-                    $request['logistics'] ?? 0,
-                    $request['part_payment_amount'] ?? 0,
-                    $totalCost
                 );
             }
             
