@@ -50,7 +50,6 @@ class CreateSalesRequest extends FormRequest
             'type' => 'required',
             'is_split_payment' => "required",
             'split' => 'sometimes',
-            
             'start_date' => 'sometimes',
             'end_date' => 'sometimes',
             'payment_type' => 'sometimes',

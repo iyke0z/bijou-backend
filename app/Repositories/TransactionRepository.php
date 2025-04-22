@@ -159,33 +159,22 @@ class TransactionRepository implements TransactionRepositoryInterface{
                         $totalCost
                     );
                 }
-            } else {
-                registerLedger(
-                    $isNegativeStock ? 'negative_stock' : 'sales',
-                    'sales_'.$transaction->id,
-                    $request['amount'],
-                    $shopId,
-                    $request['type'],
-                    $request['payment_method'],
-                    $request['logistics'] ?? 0,
-                    $request['part_payment_amount'] ?? 0,
-                    $totalCost
-                );
-            }
+            } 
             
-            if($request['payment_method'] == "wallet" || $request['type'] == 'on_credit'){
+            else if($request['payment_method'] == "wallet" || $request['type'] == 'on_credit'){
                 $customer = Customer::find($request["customer_id"]);
                 $customer->wallet_balance = $customer->wallet_balance - $request["amount"];
                 $customer->save();
             }
 
-            if($request['is_prepayment']  == 1 || $request['is_postpayment'] == 1){
+            else if($request['payment_type']  == 'prepayment' || $request['payment_type'] == 'postpayment'){
                 // update transaction
+                $transaction = Transaction::where('id', $transaction->id)->first();
                 $transaction->amount = $request["amount"];
-                $transaction->start_dat = $request["start_date"];
+                $transaction->start_date = $request["start_date"];
                 $transaction->end_date = $request["end_date"];
                 $transaction->payment_type = $request["payment_type"];
-                $transaction->monthly_value = $request["monthly_value"];
+                $transaction->monthly_value = $request['amount']/Carbon::parse($request['start_date'])->diffInMonths(Carbon::parse($request['end_date']));
                 $transaction->posting_day = $request["posting_day"];
                 $transaction->save();
 
@@ -195,18 +184,16 @@ class TransactionRepository implements TransactionRepositoryInterface{
                     'sales_'.$transaction->id,
                     $request['amount'],
                     $shopId,
-                    $request['type'],
+                    $request['payment_type'],
                     $request['payment_method'],
                     $request['logistics'] ?? 0,
                     0, // part_payment_amount (already handled)
                     $totalCost,
-                    null,
-                    $request['is_prepayment'] == 1 ? 'prepayment' : 'postpayment'
                 );
 
             }
             
-            if($request['type'] == "part_payment"){
+            else if($request['type'] == "part_payment"){
                 $customer = Customer::find($request["customer_id"]);
                 $customer->wallet_balance = $customer->wallet_balance - ($request["amount"] - $request["part_payment_amount"]);
                 $customer->save();
@@ -220,13 +207,25 @@ class TransactionRepository implements TransactionRepositoryInterface{
                 );
             }
 
-            if ( $request['is_order'] == false && $request['type'] == "on_credit" || $request['type'] != 'part_payment_amount') {
+            else if( $request['is_order'] == false && $request['type'] == "on_credit" || $request['type'] != 'part_payment_amount') {
                 bankService(
                     $request['amount'], 
                     "SALES", 
                     $transaction->id,
                     $shopId,
                     "CREDIT"
+                );
+            } else {
+                registerLedger(
+                    $isNegativeStock ? 'negative_stock' : 'sales',
+                    'sales_'.$transaction->id,
+                    $request['amount'],
+                    $shopId,
+                    $request['type'],
+                    $request['payment_method'],
+                    $request['logistics'] ?? 0,
+                    $request['part_payment_amount'] ?? 0,
+                    $totalCost
                 );
             }
             

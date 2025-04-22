@@ -19,6 +19,7 @@ use App\Models\SplitPayments;
 use App\Models\Transaction;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class ReportRepository implements ReportRepositoryInterface{
@@ -85,263 +86,285 @@ public function getLogisticsExpenditure($start_date, $end_date, $shopId)
             ->where('transaction_type', 'debit'), $shopId)->sum('amount');
 }
 
-    public function downloadReport($request) {
-        // Define your date range
-        $businessTime = getBusinessTime();
-        $opening_time = $businessTime['start_time'] ?? "00=>00";
-        $closing_time = $businessTime['closing_time'] ?? "23=>59";
-        $start_date = Carbon::parse($request['start_date'])->format('Y-m-d') . ' ' . $opening_time;
-        $end_date = Carbon::parse($request['end_date'])->format('Y-m-d') . ' ' . $closing_time;
-       
+
+public function downloadReport($request)
+{
+    // Validate inputs
+    try {
+        $start_date = Carbon::parse($request['start_date'])->format('Y-m-d');
+        $end_date = Carbon::parse($request['end_date'])->format('Y-m-d');
+        if ($start_date > $end_date) {
+            Log::error("Invalid date range: start_date ($start_date) is after end_date ($end_date)", ['shopId' => $request['shop_id']]);
+            return res_bad_request('Invalid date range');
+        }
         $shopId = $request['shop_id'];
-        $shopName = "All Shops";
-        if($shopId != 0){
-            $shop = Shop::find($shopId);
-            $shopName = $shop->title;
+        if (empty($shopId) && $shopId !== 0) {
+            Log::error("Invalid shopId: shopId is empty");
+            return res_bad_request('Invalid shopId');
         }
+    } catch (\Exception $e) {
+        Log::error("Error parsing dates: {$e->getMessage()}", ['shopId' => $request['shop_id']]);
+        return res_bad_request('Invalid date format');
+    }
 
-        
-        // Get all ledger records within the date range for the specific shop
-        $ledger = applyShopFilter(GeneralLedger::whereBetween('created_at', [$start_date, $end_date]), $shopId)->get();
+    // Define date range with business hours
+    $businessTime = getBusinessTime();
+    $opening_time = $businessTime['start_time'] ?? "00:00";
+    $closing_time = $businessTime['closing_time'] ?? "23:59";
+    $start_date = $start_date . ' ' . $opening_time;
+    $end_date = $end_date . ' ' . $closing_time;
 
-        // Initialize variables for calculations
-        $turnover = 0;
-        $total_expenditure = 0;
-        $cogs = 0;
-        $gross_profit = 0;
-        $net_profit = 0;
-        $opex = 0;
-        $marketing_cost = 0;
-        $salaries = 0;
-        $utilities = 0;
-        $inventory_value = 0;
-        $payables = 0;
-        $receivables = 0;
-        
-        
-        $expenses = [
-            'marketing_cost' => 0,
-            'salaries' => 0,
-            'utilities' => 0,
+    // Get shop name
+    $shopName = "All Shops";
+    if ($shopId != 0) {
+        $shop = Shop::find($shopId);
+        $shopName = $shop ? $shop->title : "Unknown Shop";
+    }
+
+    // Get ledger records
+    $ledger = applyShopFilter(GeneralLedger::whereBetween('created_at', [$start_date, $end_date]), $shopId)->get();
+
+    // Initialize financial metrics
+    $turnover = 0;
+    $total_expenditure = 0;
+    $cogs = 0;
+    $gross_profit = 0;
+    $net_profit = 0;
+    $opex = 0;
+    $marketing_expense = 0;
+    $salaries = 0;
+    $utilities = 0;
+    $logistics_expense = 0;
+    $inventory_value = 0;
+    $payables = 0;
+    $receivables = 0;
+    $prepaid_sales = 0;
+    $prepaid_inventory = 0;
+    $prepaid_expense = 0;
+    $cash_balance = 0;
+    $bank_balance = 0;
+
+    $expenses = [
+        'marketing_expense' => 0,
+        'salaries' => 0,
+        'utilities' => 0,
+        'logistics_expense' => 0,
+    ];
+
+    // Process ledger entries
+    foreach ($ledger as $entry) {
+        $amount = $entry->amount;
+        $type = $entry->transaction_type;
+        $account = strtolower($entry->account_name);
+
+        switch ($account) {
+            case 'sales':
+                if ($type === 'credit') {
+                    $turnover += $amount;
+                }
+                break;
+
+            case 'cost_of_goods_sold':
+                if ($type === 'debit') {
+                    $cogs += $amount;
+                    $total_expenditure += $amount;
+                }
+                break;
+
+            case 'inventory':
+                if ($type === 'debit') {
+                    $inventory_value += $amount;
+                } elseif ($type === 'credit') {
+                    $inventory_value -= $amount;
+                }
+                break;
+
+            case 'cash':
+                $cash_balance += ($type === 'debit') ? $amount : -$amount;
+                break;
+
+            case 'bank':
+                $bank_balance += ($type === 'debit') ? $amount : -$amount;
+                break;
+
+            case 'accounts_payable':
+                if ($type === 'credit') {
+                    $payables += $amount;
+                } elseif ($type === 'debit') {
+                    $payables -= $amount;
+                }
+                break;
+
+            case 'accounts_receivable':
+                if ($type === 'debit') {
+                    $receivables += $amount;
+                } elseif ($type === 'credit') {
+                    $receivables -= $amount;
+                }
+                break;
+
+            case 'prepaid_sales':
+                if ($type === 'credit') {
+                    $prepaid_sales += $amount;
+                } elseif ($type === 'debit') {
+                    $prepaid_sales -= $amount;
+                }
+                break;
+
+            case 'prepaid_inventory':
+                if ($type === 'debit') {
+                    $prepaid_inventory += $amount;
+                } elseif ($type === 'credit') {
+                    $prepaid_inventory -= $amount;
+                }
+                break;
+
+            case 'prepaid_expense':
+                if ($type === 'debit') {
+                    $prepaid_expense += $amount;
+                } elseif ($type === 'credit') {
+                    $prepaid_expense -= $amount;
+                }
+                break;
+
+            case 'marketing_expense':
+            case 'salaries':
+            case 'utilities':
+            case 'logistics_expense':
+                if ($type === 'debit') {
+                    $expenses[$account] += $amount;
+                    $opex += $amount;
+                    $total_expenditure += $amount;
+                }
+                break;
+        }
+    }
+
+    // Process transactions for ledger summary
+    $debit_transactions = [];
+    $credit_transactions = [];
+    $total_debit = 0;
+    $total_credit = 0;
+
+    foreach ($ledger as $entry) {
+        $transaction = [
+            'account_name' => $entry->account_name,
+            'amount' => $entry->amount,
+            'description' => $entry->description ?? '',
+            'transaction_id' => $entry->transaction_id ?? '',
+            'transaction_type' => $entry->transaction_type,
+            'date' => $entry->created_at->format('Y-m-d H:i:s'),
         ];
-        
-        $cash_balance = 0;
-        $bank_balance = 0;
-        
-        foreach ($ledger as $entry) {
-            $amount = $entry->amount;
-            $type = $entry->transaction_type;
-            $account = strtolower($entry->account_name);
-        
-            switch ($account) {
-                case 'sales':
-                    if ($type === 'credit') {
-                        $turnover += $amount;
-        
-                        // Check for matching cash/bank debit (full payment)
-                        $paid = $ledger->contains(function ($e) use ($amount) {
-                            return in_array(strtolower($e->account_name), ['cash', 'bank']) &&
-                                $e->transaction_type === 'debit' &&
-                                $e->amount === $amount;
-                        });
-        
-                        if (!$paid) {
-                            $receivables += $amount;
-                        }
-                    }
-                    break;
-        
-                case 'cost_of_goods_sold':
-                    if ($type === 'debit') {
-                        $cogs += $amount;
-                    }
-                    break;
-        
-                case 'inventory':
-                    if ($type === 'debit') {
-                        $inventory_value += $amount;
-                    }
-                    break;
-        
-                case 'cash':
-                    $cash_balance += ($type === 'debit') ? $amount : -$amount;
-                    break;
-        
-                case 'bank':
-                    $bank_balance += ($type === 'debit') ? $amount : -$amount;
-                    break;
-        
-                case 'purchase':
-                    if ($type === 'debit') {
-                        $total_expenditure += $amount;
-                    }
-                    break;
-        
-                case 'accounts_payable':
-                    if ($type === 'credit') {
-                        $payables += $amount;
-                    }
-                    break;
-        
-                case 'accounts_receivable':
-                    if ($type === 'debit') {
-                        $receivables += $amount;
-                    }
-                    break;
-        
-                // Expenses
-                case 'marketing_cost':
-                case 'salaries':
-                case 'utilities':
-                    if ($type === 'credit') {
-                        $expenses[$account] += $amount;
-                        $total_expenditure += $amount;
-                    }
-                    break;
-            }
+
+        if ($entry->transaction_type === 'debit') {
+            $debit_transactions[] = $transaction;
+            $total_debit += $entry->amount;
+        } elseif ($entry->transaction_type === 'credit') {
+            $credit_transactions[] = $transaction;
+            $total_credit += $entry->amount;
         }
-        
-        
+    }
 
-        $debit_transactions = [];
-        $credit_transactions = [];
-        $total_debit = 0;
-        $total_credit = 0;
+    // Fetch additional data
+    $cash = $this->getCash($start_date, $end_date, $shopId);
+    $bank = $this->getBank($start_date, $end_date, $shopId);
+    $logistics = $this->getLogisticsRevenue($start_date, $end_date, $shopId);
+    $logistics_expenditure = $this->getLogisticsExpenditure($start_date, $end_date, $shopId);
+    $sales_by_product = $this->getSalesByProduct($start_date, $end_date, $shopId);
+    $customers = $this->getCustomerCount($start_date, $end_date, $shopId);
+    $budgeted_revenue = applyShopFilter(Budget::where('budget_type', 'revenue')->whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date]), $shopId)->sum('budget_amount');
+    $budgeted_expenditure = applyShopFilter(Budget::where('budget_type', 'expenditure')->whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date]), $shopId)->sum('budget_amount');
 
-        foreach ($ledger as $entry) {
-            $transaction = [
-                'account_name' => $entry->account_name,
-                'amount' => $entry->amount,
-                'description' => $entry->description ?? '',
-                'transaction_id' => $entry->transaction_id ?? '',
-                'transaction_type' => $entry->transaction_type,
-                'date' => $entry->created_at->format('Y-m-d H:i:s'),
-            ];
+    // Calculate key metrics
+    $gross_profit = $turnover - $cogs;
+    $net_profit = $gross_profit - $opex;
+    $net_profit_margin = $turnover > 0 ? ($net_profit / $turnover) * 100 : 0;
+    $ebit = $gross_profit - $opex;
+    $roi = $total_expenditure > 0 ? ($net_profit / $total_expenditure) * 100 : 0;
 
-            if ($entry->transaction_type === 'debit') {
-                $debit_transactions[] = $transaction;
-                $total_debit += $entry->amount;
-            } elseif ($entry->transaction_type === 'credit') {
-                $credit_transactions[] = $transaction;
-                $total_credit += $entry->amount;
-            }
-        }
+    // Additional Balance Sheet items
+    $property_plant_equipment = 0;
+    $long_term_investments = 0;
+    $intangible_assets = 0;
+    $long_term_loans = 0;
+    $deferred_tax_liability = 0;
+    $owner_investment = (($cash + $bank + $receivables + $inventory_value + $prepaid_inventory + $prepaid_expense) - ($payables + $prepaid_sales)) - $net_profit;
+    $retained_earnings = $net_profit;
+    $dividends = 0;
 
+    // Additional Income Statement items
+    $other_income = 0;
+    $tax_expense = 0;
+    $depreciation = 0;
+    $amortization = 0;
 
-        $cash = $this->getCash($start_date, $end_date, $shopId);
-        $bank = $this->getBank($start_date, $end_date,  $shopId);
-        $logistics = $this->getLogisticsRevenue($start_date, $end_date, $shopId);
-        $logistics_expenditure = $this->getLogisticsExpenditure($start_date, $end_date, $shopId);
-        // Calculate key metrics
-        $gross_profit = $turnover - $cogs;
-        $net_profit = $gross_profit - ($opex + $marketing_cost + $salaries + $utilities);
-        $total_expenditure = $cogs + $marketing_cost + $salaries + $utilities + $inventory_value;
-    
-        // Profit margin calculation
-        $net_profit_margin = ($net_profit / $turnover) * 100;
-    
-        // Calculate EBIT and ROI
-        $ebit = $turnover - ($opex + $marketing_cost + $salaries + $utilities);
-        $roi = $total_expenditure > 0 ? ($net_profit / $total_expenditure) * 100 : 0;
-
-    
-        // Fetch sales by product, customers, receivables, etc.
-        // Example: You may have a relationship or additional tables to fetch these dynamically
-        $sales_by_product = $this->getSalesByProduct($start_date, $end_date, $shopId);
-        $customers = $this->getCustomerCount($start_date, $end_date, $shopId);
-        $budgeted_revenue = applyShopFilter(Budget::where('budget_type', 'revenue')->whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date]), $shopId)
-        ->sum('budget_amount');
-        $budgeted_expenditure = applyShopFilter(Budget::where('budget_type', 'expenditure')->whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date]), $shopId)
-        ->sum('budget_amount');
-        // Non-current assets (assuming you don't track these yet, so initializing to 0)
-        $property_plant_equipment = 0;
-        $long_term_investments = 0;
-        $intangible_assets = 0;
-
-        // Long-term liabilities
-        $long_term_loans = 0;
-        $deferred_tax_liability = 0;
-
-        // Equity (extending for more detailed items)
-        $owner_investment = 0;
-        $retained_earnings = $net_profit;
-        $dividends = 0;
-
-        // Additional Income Statement items
-        $other_income = 0;
-        $tax_expense = 0;
-        $depreciation = 0;
-        $amortization = 0;
-
-        if($turnover == 0){
-            $turnover = 0.01; // Avoid division by zero in ROI calculation
-        }
-        // Build the report structure
-        $report = [
-            "summary" => [
-                "start_date" => $start_date,
-                "end_date" => $end_date,
-                "overview" => "Brief summary of financial performance during the reporting period",
-                "Branch" => $shopName,
-                "key_metrics" => [
-                    "total_revenue" => $turnover,
-                    "total_expenditure" => $total_expenditure,
-                    "gross_profit" => $gross_profit,
-                    "net_profit" => $net_profit,
-                    "ebit" => $ebit,
-                    "roi" => $roi,
-                    "profit_margin" => $net_profit_margin
-                ]
-            ],
-            "revenue" => [
+    // Build report structure
+    $report = [
+        "summary" => [
+            "start_date" => $start_date,
+            "end_date" => $end_date,
+            "overview" => "Financial performance summary for the reporting period",
+            "Branch" => $shopName,
+            "key_metrics" => [
                 "total_revenue" => $turnover,
-                "sales_by_product" => $sales_by_product,
-                "kpi" => [
-                    "average_sales_per_customer" => $turnover / $customers,
-                    "customer_acquisition_cost" => ($marketing_cost + $opex) / $customers,
-                ]
-            ],
-            "expenditure" => [
                 "total_expenditure" => $total_expenditure,
-                "cost_of_goods_sold" => $cogs,
-                "operating_expenses" => $opex + $salaries + $utilities + $marketing_cost,
-                "expenditure_details" => $this->getExpenditureDetails($start_date, $end_date, $shopId),
-                "purchase_details" => $this->getPurchaseDetails($start_date, $end_date, $shopId)
-            ],
-            "profit_loss_statement" => [
-                "revenue" => $turnover,
-                "other_income" => $other_income,
-                "cost_of_goods_sold" => $cogs,
                 "gross_profit" => $gross_profit,
-                "operating_expenses" => $opex + $salaries + $utilities + $marketing_cost,
-                "depreciation" => $depreciation,
-                "amortization" => $amortization,
-                "operating_profit" => $gross_profit - ($opex + $marketing_cost + $salaries + $utilities + $depreciation + $amortization),
-                "tax_expense" => $tax_expense,
-                "net_profit" => $net_profit
-            ],
-
-            "receivables" => [
-                "total_receivables" => $receivables,
-                "receivable_details" => $this->getReceivablesDetails($start_date, $end_date, $shopId),
-                "customer_count" => $customers,
-            ],
-            "stock_movement" => [
-                "stock_sold" => $this->getStockSold($start_date, $end_date, $shopId),
-                "stock_adjustments" => $this->getStockAdjustments($start_date, $end_date, $shopId),
-                "negative_stock" => $this->getNegativeStockValue($start_date, $end_date, $shopId)
-            ],
-            "cash_flow" => [
-                "cash_inflow" => $this->getCashInflow($start_date, $end_date, $shopId),
-                "cash_outflow" => $this->getCashOutflow($start_date, $end_date, $shopId)
-            ],
-            "balance_sheet" => [
+                "net_profit" => $net_profit,
+                "ebit" => $ebit,
+                "roi" => $roi,
+                "profit_margin" => $net_profit_margin
+            ]
+        ],
+        "revenue" => [
+            "total_revenue" => $turnover,
+            "sales_by_product" => $sales_by_product,
+            "kpi" => [
+                "average_sales_per_customer" => $customers > 0 ? $turnover / $customers : 0,
+                "customer_acquisition_cost" => $customers > 0 ? ($marketing_expense + $opex) / $customers : 0,
+            ]
+        ],
+        "expenditure" => [
+            "total_expenditure" => $total_expenditure,
+            "cost_of_goods_sold" => $cogs,
+            "operating_expenses" => $opex,
+            "expenditure_details" => $this->getExpenditureDetails($start_date, $end_date, $shopId),
+            "purchase_details" => $this->getPurchaseDetails($start_date, $end_date, $shopId)
+        ],
+        "profit_loss_statement" => [
+            "revenue" => $turnover,
+            "other_income" => $other_income,
+            "cost_of_goods_sold" => $cogs,
+            "gross_profit" => $gross_profit,
+            "operating_expenses" => $opex,
+            "depreciation" => $depreciation,
+            "amortization" => $amortization,
+            "operating_profit" => $gross_profit - ($opex + $depreciation + $amortization),
+            "tax_expense" => $tax_expense,
+            "net_profit" => $net_profit
+        ],
+        "receivables" => [
+            "total_receivables" => $receivables,
+            "receivable_details" => $this->getReceivablesDetails($start_date, $end_date, $shopId),
+            "customer_count" => $customers,
+        ],
+        "stock_movement" => [
+            "stock_sold" => $this->getStockSold($start_date, $end_date, $shopId),
+            "stock_adjustments" => $this->getStockAdjustments($start_date, $end_date, $shopId),
+            "negative_stock" => $this->getNegativeStockValue($start_date, $end_date, $shopId)
+        ],
+        "cash_flow" => [
+            "cash_inflow" => $this->getCashInflow($start_date, $end_date, $shopId),
+            "cash_outflow" => $this->getCashOutflow($start_date, $end_date, $shopId)
+        ],
+        "balance_sheet" => [
             "assets" => [
                 "current_assets" => [
                     "cash" => $cash,
                     "bank" => $bank,
                     "accounts_receivable" => $receivables,
                     "inventory" => $inventory_value,
+                    "prepaid_inventory" => $prepaid_inventory,
+                    "prepaid_expense" => $prepaid_expense,
                 ],
                 "non_current_assets" => [
                     "property_plant_equipment" => $property_plant_equipment,
@@ -352,6 +375,7 @@ public function getLogisticsExpenditure($start_date, $end_date, $shopId)
             "liabilities" => [
                 "current_liabilities" => [
                     "accounts_payable" => $payables,
+                    "prepaid_sales" => $prepaid_sales,
                 ],
                 "non_current_liabilities" => [
                     "long_term_loans" => $long_term_loans,
@@ -359,42 +383,38 @@ public function getLogisticsExpenditure($start_date, $end_date, $shopId)
                 ]
             ],
             "equity" => [
-                "owner_investment" => (($cash + $receivables + $inventory_value) - $payables) - $net_profit,
+                "owner_investment" => $owner_investment,
                 "retained_earnings" => $retained_earnings,
                 "dividends" => $dividends
             ]
         ],
+        "logistics_break_down" => [
+            "revenue" => $logistics,
+            "expenditure" => $logistics_expenditure
+        ],
+        "sales_vs_marketing_expenditure" => [
+            "sales_expenditure" => $cogs,
+            "marketing_expenditure" => $marketing_expense
+        ],
+        "budget_vs_actual" => [
+            "budgeted_revenue" => $budgeted_revenue,
+            "actual_revenue" => $turnover,
+            "revenue_variance" => $turnover - $budgeted_revenue,
+            "budgeted_expenditure" => $budgeted_expenditure,
+            "actual_expenditure" => $total_expenditure,
+            "expenditure_variance" => $total_expenditure - $budgeted_expenditure,
+        ],
+        "ledger_details" => $ledger,
+        "general_ledger_summary" => [
+            "total_debit" => $total_debit,
+            "total_credit" => $total_credit,
+            "debit_transactions" => $debit_transactions,
+            "credit_transactions" => $credit_transactions
+        ],
+    ];
 
-            "logistics_break_down" => [
-                "revenue" => $logistics,
-                "expenditure" => $logistics_expenditure
-            ],
-            "sales_vs_marketing_expenditure" => [
-                "sales_expenditure" => $cogs,
-                "marketing_expenditure" => $marketing_cost
-            ],
-            "budget_vs_actual" => [
-                "budgeted_revenue" => $budgeted_revenue,
-                "actual_revenue" => $turnover,
-                "revenue_variance" => $turnover - $budgeted_revenue,
-                "budgeted_expenditure" => $budgeted_expenditure,
-                "actual_expenditure" => $total_expenditure,
-                "expenditure_variance" => $total_expenditure - $budgeted_expenditure,
-            ],
-            "ledger_details"=> $ledger,
-            "general_ledger_summary" => [
-                "total_debit" => $total_debit,
-                "total_credit" => $total_credit,
-                "debit_transactions" => $debit_transactions,
-                "credit_transactions" => $credit_transactions
-            ],
-
-        ];
-    
-        return res_success('report generated', $report);
-    }
-    
-    
+    return res_success('Report generated', $report);
+}
 
     public function getStockSold($start_date, $end_date, $shopId)
     {

@@ -255,115 +255,188 @@ if (!function_exists('bankService')) {
                 
             }
         }
-        
+    if (!function_exists('registerLedger')) {
         if (!function_exists('registerLedger')) {
             function registerLedger($activity, $transaction_id, $amount, $shopId, $payment_type, $payment_method = null, $logistics = 0, $partial_payment = 0, $cost_price = null, $expense_account = 'opex', $accrual = null)
             {
+                // Validate inputs
+                if ($amount <= 0) {
+                    Log::error("Invalid amount: $amount for transaction $transaction_id");
+                    return;
+                }
+                if ($partial_payment > $amount) {
+                    Log::error("Partial payment $partial_payment exceeds amount $amount for transaction $transaction_id");
+                    return;
+                }
+                if ($cost_price !== null && $cost_price < 0) {
+                    Log::error("Invalid cost price: $cost_price for transaction $transaction_id");
+                    return;
+                }
+
                 // SALES TRANSACTION
                 if ($activity === 'sales') {
-                    Log::info("Processing SALES transaction");
-        
+                    Log::info("Processing SALES transaction", ['transaction_id' => $transaction_id, 'payment_type' => $payment_type]);
+
                     switch ($payment_type) {
                         case 'full_payment':
-                            registerPayment($payment_method, 'debit', $amount, $transaction_id, $shopId, 'full sales payment');
+                            registerPayment($payment_method, 'debit', $amount, $transaction_id, $shopId, 'Full sales payment');
                             registerTransaction('sales', 'credit', $amount, $transaction_id, $shopId, 'Credit sales for full payment');
                             break;
-        
+
                         case 'on_credit':
                             registerTransaction('accounts_receivable', 'debit', $amount, $transaction_id, $shopId, 'Credit sale on receivable');
                             registerTransaction('sales', 'credit', $amount, $transaction_id, $shopId, 'Credit sales for credit sale');
                             break;
-        
+
                         case 'part_payment':
                             $receivable = $amount - $partial_payment;
                             registerTransaction('accounts_receivable', 'debit', $receivable, $transaction_id, $shopId, 'Partially unpaid sales receivable');
-                            registerPayment($payment_method, 'debit', $partial_payment, $transaction_id, $shopId, 'part sales payment');
+                            registerPayment($payment_method, 'debit', $partial_payment, $transaction_id, $shopId, 'Part sales payment');
                             registerTransaction('sales', 'credit', $amount, $transaction_id, $shopId, 'Credit sales for part payment');
                             break;
-        
+
                         case 'complementary':
                             registerTransaction('marketing_expense', 'debit', $amount, $transaction_id, $shopId, 'Marketing cost - complementary sale');
-                            registerTransaction('inventory', 'credit', $cost_price, $transaction_id, $shopId, 'Credit inventory for free goods');
+                            if ($cost_price !== null) {
+                                registerTransaction('inventory', 'credit', $cost_price, $transaction_id, $shopId, 'Credit inventory for free goods');
+                            }
                             break;
+
+                        case 'prepayment':
+                            registerTransaction('prepaid_sales', 'credit', $amount, $transaction_id, $shopId, 'Deferred revenue for future sales');
+                            registerPayment($payment_method, 'debit', $amount, $transaction_id, $shopId, 'Cash received for future sales');
+                            break;
+
+                        case 'postpayment':
+                            registerTransaction('accounts_receivable', 'debit', $amount, $transaction_id, $shopId, 'Sales accrued (on credit)');
+                            registerTransaction('sales', 'credit', $amount, $transaction_id, $shopId, 'Sales recognized for postpayment');
+                            break;
+
+                        default:
+                            Log::error("Invalid payment type: $payment_type for sales transaction $transaction_id");
+                            return;
                     }
-        
+
                     // Record COGS for all but complementary if cost price is provided
                     if ($cost_price !== null && $payment_type !== 'complementary') {
                         registerTransaction('cost_of_goods_sold', 'debit', $cost_price, $transaction_id, $shopId, 'COGS for sold inventory');
                         registerTransaction('inventory', 'credit', $cost_price, $transaction_id, $shopId, 'Credit inventory for sold item');
                     }
-        
+
                     // Logistics (optional)
                     if ($logistics > 0) {
                         registerTransaction('logistics_expense', 'debit', $logistics, $transaction_id, $shopId, 'Logistics cost');
                         registerPayment($payment_method, 'credit', $logistics, $transaction_id, $shopId, 'Pay logistics from cash/bank');
                     }
+
+                    // Handle accrual for prepayment
+                    if ($accrual !== null && $payment_type === 'prepayment') {
+                        Log::info("Processing sales accrual", ['transaction_id' => $transaction_id, 'amount' => $amount]);
+                        registerTransaction('prepaid_sales', 'debit', $amount, $transaction_id, $shopId, 'Reduce prepaid sales for month');
+                        registerTransaction('sales', 'credit', $amount, $transaction_id, $shopId, 'Recognized revenue for month');
+                    }
                 }
-        
-                // PURCHASE TRANSACTION
+
                 // PURCHASE TRANSACTION
                 if ($activity === 'purchase') {
-                    Log::info("Processing PURCHASE transaction");
+                    Log::info("Processing PURCHASE transaction", ['transaction_id' => $transaction_id, 'payment_type' => $payment_type]);
 
                     switch ($payment_type) {
                         case 'full_payment':
-                            registerPayment($payment_method, 'credit', $amount, $transaction_id, $shopId, 'purchase payment');
+                            registerTransaction('inventory', 'debit', $amount, $transaction_id, $shopId, 'Add to inventory');
+                            registerPayment($payment_method, 'credit', $amount, $transaction_id, $shopId, 'Purchase payment');
                             break;
 
                         case 'on_credit':
+                            registerTransaction('inventory', 'debit', $amount, $transaction_id, $shopId, 'Add to inventory');
                             registerTransaction('accounts_payable', 'credit', $amount, $transaction_id, $shopId, 'Credit purchase on payable');
                             break;
 
                         case 'part_payment':
                             $payable = $amount - $partial_payment;
+                            registerTransaction('inventory', 'debit', $amount, $transaction_id, $shopId, 'Add to inventory');
                             registerTransaction('accounts_payable', 'credit', $payable, $transaction_id, $shopId, 'Partially unpaid payable');
-                            registerPayment($payment_method, 'credit', $partial_payment, $transaction_id, $shopId, 'part purchase payment');
+                            registerPayment($payment_method, 'credit', $partial_payment, $transaction_id, $shopId, 'Part purchase payment');
                             break;
+
+                        case 'prepayment':
+                            registerTransaction('prepaid_inventory', 'debit', $amount, $transaction_id, $shopId, 'Prepaid inventory for future use');
+                            registerPayment($payment_method, 'credit', $amount, $transaction_id, $shopId, 'Cash paid for prepaid inventory');
+                            break;
+
+                        case 'postpayment':
+                            registerTransaction('inventory', 'debit', $amount, $transaction_id, $shopId, 'Inventory purchased');
+                            registerTransaction('accounts_payable', 'credit', $amount, $transaction_id, $shopId, 'Accrual for inventory purchase');
+                            break;
+
+                        default:
+                            Log::error("Invalid payment type: $payment_type for purchase transaction $transaction_id");
+                            return;
                     }
 
-                    // Inventory and purchase cost
-                    if ($amount !== null) {
-                        registerTransaction('inventory', 'debit', $amount, $transaction_id, $shopId, 'Add to inventory');
-
-                        // ✅ Add corresponding debit to purchase expense account
-                        // registerTransaction('purchase', 'debit', $amount, $transaction_id, $shopId, 'Record purchase expense');
-
-                        // ✅ Credit the cost of purchase for double-entry
-                        // registerTransaction('cost_of_purchase', 'credit', $amount, $transaction_id, $shopId, 'Credit purchase account');
+                    // Handle accrual for prepayment
+                    if ($accrual !== null && $payment_type === 'prepayment') {
+                        Log::info("Processing purchase accrual", ['transaction_id' => $transaction_id, 'amount' => $amount]);
+                        registerTransaction('inventory', 'debit', $amount, $transaction_id, $shopId, 'Recognized inventory for month');
+                        registerTransaction('prepaid_inventory', 'credit', $amount, $transaction_id, $shopId, 'Reduce prepaid inventory for month');
                     }
                 }
 
-        
                 // EXPENDITURE TRANSACTION
                 if ($activity === 'expenditure') {
-                    Log::info("Processing EXPENDITURE transaction");
-        
+                    Log::info("Processing EXPENDITURE transaction", ['transaction_id' => $transaction_id, 'payment_type' => $payment_type]);
+
                     switch ($payment_type) {
                         case 'full_payment':
-                            registerPayment($payment_method, 'credit', $amount, $transaction_id, $shopId, 'full expense payment');
+                            registerTransaction($expense_account, 'debit', $amount, $transaction_id, $shopId, "Debit {$expense_account} for expense");
+                            registerPayment($payment_method, 'credit', $amount, $transaction_id, $shopId, 'Full expense payment');
                             break;
-        
+
                         case 'on_credit':
+                            registerTransaction($expense_account, 'debit', $amount, $transaction_id, $shopId, "Debit {$expense_account} for expense");
                             registerTransaction('accounts_payable', 'credit', $amount, $transaction_id, $shopId, 'Credit payable for expense');
                             break;
-        
+
                         case 'part_payment':
                             $payable = $amount - $partial_payment;
+                            registerTransaction($expense_account, 'debit', $amount, $transaction_id, $shopId, "Debit {$expense_account} for expense");
                             registerTransaction('accounts_payable', 'credit', $payable, $transaction_id, $shopId, 'Partial expense payable');
-                            registerPayment($payment_method, 'credit', $partial_payment, $transaction_id, $shopId, 'part expense payment');
+                            registerPayment($payment_method, 'credit', $partial_payment, $transaction_id, $shopId, 'Part expense payment');
                             break;
+
+                        case 'prepayment':
+                            registerTransaction('prepaid_expense', 'debit', $amount, $transaction_id, $shopId, 'Prepayment for future expenses');
+                            registerPayment($payment_method, 'credit', $amount, $transaction_id, $shopId, 'Cash paid for future expenses');
+                            break;
+
+                        case 'postpayment':
+                            registerTransaction($expense_account, 'debit', $amount, $transaction_id, $shopId, "Debit {$expense_account} for expense");
+                            registerTransaction('accounts_payable', 'credit', $amount, $transaction_id, $shopId, 'Accrual for payable expense');
+                            break;
+
+                        default:
+                            Log::error("Invalid payment type: $payment_type for expenditure transaction $transaction_id");
+                            return;
                     }
-        
-                    registerTransaction($expense_account, 'debit', $amount, $transaction_id, $shopId, "Debit {$expense_account} for expense");
+
+                    // Handle accrual for prepayment
+                    if ($accrual !== null && $payment_type === 'prepayment') {
+                        Log::info("Processing expenditure accrual", ['transaction_id' => $transaction_id, 'amount' => $amount]);
+                        registerTransaction($expense_account, 'debit', $amount, $transaction_id, $shopId, "Debit {$expense_account} for recognized expense");
+                        registerTransaction('prepaid_expense', 'credit', $amount, $transaction_id, $shopId, 'Reduce prepaid expense for month');
+                    }
                 }
-        
+
                 // NEGATIVE STOCK TRANSACTION
                 if ($activity === 'negative_stock') {
+                    Log::info("Processing NEGATIVE STOCK transaction", ['transaction_id' => $transaction_id]);
                     registerTransaction('stock_adjustment', 'credit', $amount, $transaction_id, $shopId, 'Correct negative inventory');
                     registerTransaction('inventory', 'debit', $amount, $transaction_id, $shopId, 'Adjust inventory for stock');
                 }
             }
         }
+    }
+
         function registerPayment($method, $type, $amount, $transaction_id, $shopId, $label = '') {
             $account = ($method === 'cash') ? 'cash' : 'bank';
             $label = ucfirst($label);

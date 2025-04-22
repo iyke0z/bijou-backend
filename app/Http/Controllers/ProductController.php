@@ -186,7 +186,6 @@ class ProductController extends Controller
                     $split_payment->shop_id = $shopId;
                     $split_payment->transaction_type = 'purchases';
                     $split_payment->save();
-
                     
                     
                     registerLedger(
@@ -198,7 +197,7 @@ class ProductController extends Controller
                         $request['payment_method'], 
                         0, 
                         floatval($split['split_playment_method']),
-                        getCostPrice($purchase_detail["product_id"])
+                        getCostPrice($purchase_detail["product_id"], $request['qty'])
                     );
                 }
             }
@@ -213,7 +212,7 @@ class ProductController extends Controller
                         $request['payment_method'], 
                         0, 
                         floatval($request['part_payment_amount']),
-                        getCostPrice($purchase_detail["product_id"])
+                        getCostPrice($purchase_detail["product_id"], $request['qty'])
                     );
             }else {
                 registerLedger(
@@ -225,7 +224,7 @@ class ProductController extends Controller
                     $request['payment_method'], 
                     0, 
                     floatval($request['part_payment_amount']),
-                    getCostPrice($purchase_detail["product_id"])
+                    getCostPrice($purchase_detail["product_id"], $request['qty'])
                 );
 
             }

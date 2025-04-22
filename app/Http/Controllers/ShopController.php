@@ -165,13 +165,13 @@ class ShopController extends Controller
                 registerLedger(
                     $isNegativeStock ? 'negative_stock' : 'sales',
                     "stktrf_".$transaction->id,
-                    getCostPrice($shop1->id),
+                    getCostPrice($shop1->id, $transaction['qty']),
                     $transaction->originating_shop,
                     'full_payment',
                     'transfer',
                     0,
                     $request['part_payment_amount'] ?? 0,
-                    getCostPrice($shop1->is) ,
+                    getCostPrice($shop1->is, $transaction['qty']) ,
                 );
         // }
 
@@ -217,13 +217,13 @@ class ShopController extends Controller
             registerLedger(
                 $isNegativeStock ? 'negative_stock' : 'purchase',
                 "stktrf_".$transaction->id,
-                getCostPrice($shop2->id),
+                getCostPrice($shop2->id, $transaction['qty']),
                 $transaction->destination_shop,
                 'full_payment',
                 'transfer',
                 0,
                 $request['part_payment_amount'] ?? 0,
-                getCostPrice($shop2->id) ,
+                getCostPrice($shop2->id, $transaction['qty']) ,
             );
             // the receiving shop is purchasging the product from the originating shop
 
