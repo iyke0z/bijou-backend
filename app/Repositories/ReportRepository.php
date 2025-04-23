@@ -280,6 +280,7 @@ public function downloadReport($request)
     $logistics = $this->getLogisticsRevenue($start_date, $end_date, $shopId);
     $logistics_expenditure = $this->getLogisticsExpenditure($start_date, $end_date, $shopId);
     $sales_by_product = $this->getSalesByProduct($start_date, $end_date, $shopId);
+    $sales_details = $this->getSalesDetails($start_date, $end_date, $shopId);   
     $customers = $this->getCustomerCount($start_date, $end_date, $shopId);
     $budgeted_revenue = applyShopFilter(Budget::where('budget_type', 'revenue')->whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date]), $shopId)->sum('budget_amount');
     $budgeted_expenditure = applyShopFilter(Budget::where('budget_type', 'expenditure')->whereBetween(DB::raw('date(created_at)'), [$start_date, $end_date]), $shopId)->sum('budget_amount');
@@ -328,6 +329,7 @@ public function downloadReport($request)
         "revenue" => [
             "total_revenue" => $turnover,
             "sales_by_product" => $sales_by_product,
+            "sales_details" => $sales_details,
             "kpi" => [
                 "average_sales_per_customer" => $customers > 0 ? $turnover / $customers : 0,
                 "customer_acquisition_cost" => $customers > 0 ? ($marketing_expense + $opex) / $customers : 0,
@@ -475,6 +477,11 @@ public function downloadReport($request)
             )->sum('amount');
 
     }
+
+public function getSalesDetails($start_date, $end_date, $shopId){
+    return applyShopFilter(Sale::whereBetween('created_at', [$start_date, $end_date])
+        ->with('product')->with('user'), $shopId)->get();
+}
 
 public function getSalesByProduct($start_date, $end_date, $shopId)
 {

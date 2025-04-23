@@ -126,6 +126,7 @@ class TransactionRepository implements TransactionRepositoryInterface{
                 $sale->qty = $productData["qty"];
                 $sale->user_id = $auth->user_id;
                 $sale->shop_id = $shopId;
+                $sale->previous_stock = $product->stock + $productData["qty"];
                 $sale->is_negative_sale = $afterStock < 0;
                 if ($afterStock < 0) {
                     $isNegativeStock = true;
