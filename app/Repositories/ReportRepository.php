@@ -449,18 +449,20 @@ public function downloadReport($request)
     public function getCashInflow($start_date, $end_date, $shopId)
     {
         return applyShopFilter(GeneralLedger::whereBetween('created_at', [$start_date, $end_date])
-            ->where('account_name', 'cash') // Assuming cash is tracked in a 'cash' account
-            ->where('transaction_type', 'credit'), $shopId // Cash inflows are credit transactions
-            )->sum('amount'); // Sum of cash inflows
+        ->whereIn('account_name', ['cash', 'bank']) // Cash and bank accounts
+        ->where('transaction_type', 'debit'), $shopId // Inflows are debit entries
+        )->sum('amount');
+    
     }
 
     // Method to get Cash Outflow
     public function getCashOutflow($start_date, $end_date, $shopId)
     {
         return applyShopFilter(GeneralLedger::whereBetween('created_at', [$start_date, $end_date])
-            ->where('account_name', 'cash') // Cash account
-            ->where('transaction_type', 'debit'), $shopId // Cash outflows are debit transactions
-            )->sum('amount'); // Sum of cash outflows
+                ->whereIn('account_name', ['cash', 'bank']) // Cash and bank accounts
+                ->where('transaction_type', 'credit'), $shopId // Outflows are credit entries
+            )->sum('amount');
+
     }
 
 public function getSalesByProduct($start_date, $end_date, $shopId)
