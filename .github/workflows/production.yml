@@ -17,7 +17,7 @@ jobs:
       - name: Identify Changed Folders
         id: detect-changes
         run: |
-          CHANGED_FOLDERS=$(git diff --dirstat=files,0 HEAD^ HEAD | cut -d'/' -f1 | sort -u | grep -E 'amasemporium|bingoml|edzain|ugbommaintefarms|dreambarbers|24hrs|flexglobalprime|munchiesevents|dami' || echo "")
+          CHANGED_FOLDERS=$(git diff --dirstat=files,0 HEAD^ HEAD | cut -d'/' -f1 | sort -u | grep -E 'amasemporium|bingoml|edzain|ugbommaintefarms|dreambarbers|24hrs|flexglobalprime|munchiesevents|dami|crestgrandeur' || echo "")
           echo "CHANGED_FOLDERS=$CHANGED_FOLDERS" >> $GITHUB_ENV
           if [ -z "$CHANGED_FOLDERS" ]; then
             echo "No changes detected. Skipping deployment."
@@ -286,6 +286,19 @@ jobs:
             cd /home/ngmktsit/www/business_sites/dami/api  # Navigate to the second folder
             php artisan clean
             php artisan migrate
+    
+      - name: Run PHP Artisan Command on crestgrandeur/api
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.FTP_HOST }}          # Server hostname
+          username: ${{ secrets.FTP_USERNAME }}  # SSH username
+          password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          port: 22                               # SSH port
+          script: |
+            cd /home/ngmktsit/www/business_sites/crestgrandeur/api  # Navigate to the second folder
+            php artisan clean
+            php artisan migrate
+          
 
       # - name: Run PHP Artisan Command on jtsforte/api
       #   uses: appleboy/ssh-action@v0.1.6
