@@ -67,6 +67,8 @@ class CustomerRepository implements CustomerRepositoryInterface{
             $transaction = new Transaction();
             $transaction->type = "credit";
             $transaction->amount = $request['amount'];
+            $transaction->type = "fullpayment";
+            $transaction->payment_method = 'transfer';
             $transaction->customer_id = $id;
             $transaction->user_id = Auth::user()->id;
             $transaction->shop_id = $shopId;
@@ -80,6 +82,16 @@ class CustomerRepository implements CustomerRepositoryInterface{
                 $transaction->id,
                 $shopId,
                 "CREDIT"
+            );
+
+            registerLedger(
+                'fund_customer', 
+                "fund_".$transaction->id, 
+                $request['amount'],
+                $shopId,
+                'full_payment',
+                'transfer',
+                0
             );
     }
 

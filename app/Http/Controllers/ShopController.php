@@ -252,6 +252,9 @@ class ShopController extends Controller
 
             // delete the accounting ledger
             $ledgers = GeneralLedger::where('transaction_id', "stktrf_".$transaction->id)->where('type', 'stktrf_'.$transaction->id)->get();
+            foreach ($ledgers as $ledger) {
+                $ledger->delete();
+            }
             return res_success('success', $transaction);
         }else{
             return res_not_found('record not found');

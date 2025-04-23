@@ -143,6 +143,8 @@ public function downloadReport($request)
     $prepaid_expense = 0;
     $cash_balance = 0;
     $bank_balance = 0;
+    $wallets = 0; // Assuming this is a placeholder for customer deposits
+
 
     $expenses = [
         'marketing_expense' => 0,
@@ -226,6 +228,13 @@ public function downloadReport($request)
                     $prepaid_expense -= $amount;
                 }
                 break;
+            case 'wallets':
+                if ($type === 'debit') {
+                    $wallets -= $amount;
+                } elseif ($type === 'credit') {
+                    $wallets += $amount;
+                }
+                break;
 
             case 'marketing_expense':
             case 'salaries':
@@ -291,6 +300,7 @@ public function downloadReport($request)
     $owner_investment = (($cash + $bank + $receivables + $inventory_value + $prepaid_inventory + $prepaid_expense) - ($payables + $prepaid_sales)) - $net_profit;
     $retained_earnings = $net_profit;
     $dividends = 0;
+    
 
     // Additional Income Statement items
     $other_income = 0;
@@ -376,6 +386,7 @@ public function downloadReport($request)
                 "current_liabilities" => [
                     "accounts_payable" => $payables,
                     "prepaid_sales" => $prepaid_sales,
+                    "customer_deposits" => $wallets, // Assuming this is a placeholder for customer deposits
                 ],
                 "non_current_liabilities" => [
                     "long_term_loans" => $long_term_loans,
@@ -470,7 +481,6 @@ public function getSalesByProduct($start_date, $end_date, $shopId)
     
 
     try {
-
 
         // Build query
         $query = Sale::select('products.id as product_id', 'products.name as product_name')

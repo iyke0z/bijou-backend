@@ -312,6 +312,11 @@ if (!function_exists('bankService')) {
                             registerTransaction('sales', 'credit', $amount, $transaction_id, $shopId, 'Sales recognized for postpayment');
                             break;
 
+                        case 'wallet':
+                                registerTransaction('wallets', 'debit', $amount, $transaction_id, $shopId, 'Sales from wallet');
+                                registerTransaction('sales', 'credit', $amount, $transaction_id, $shopId, 'Sales recognized for wallet payment');
+                                break;
+
                         default:
                             Log::error("Invalid payment type: $payment_type for sales transaction $transaction_id");
                             return;
@@ -335,6 +340,12 @@ if (!function_exists('bankService')) {
                         registerTransaction('prepaid_sales', 'debit', $amount, $transaction_id, $shopId, 'Reduce prepaid sales for month');
                         registerTransaction('sales', 'credit', $amount, $transaction_id, $shopId, 'Recognized revenue for month');
                     }
+                }
+
+                // fund wallet
+                if($activity == 'fund_customer'){
+                    registerTransaction('wallets', 'credit', $amount, $transaction_id, $shopId, 'Fund customer wallet');
+                    registerPayment($payment_method, 'debit', $amount, $transaction_id, $shopId, 'Fund customer wallet payment');
                 }
 
                 // PURCHASE TRANSACTION
