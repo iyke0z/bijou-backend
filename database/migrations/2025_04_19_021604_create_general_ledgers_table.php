@@ -18,7 +18,7 @@ class CreateGeneralLedgersTable extends Migration
             $table->string('account_name')->nullable();
             $table->enum('transaction_type', ['credit', 'debit'])->nullable();
             $table->string('description')->nullable();
-            $table->integer('transaction_id')->nullable();
+            $table->string('transaction_id')->nullable();
             $table->double('amount', 11, 2)->nullable();
             // $table->double('current_balance', 11, 2)->nullable();
             $table->integer('shop_id');
