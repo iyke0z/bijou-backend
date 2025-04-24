@@ -189,7 +189,7 @@ class ProductRepository implements ProductRepositoryInterface{
     public function update_purchase($request, $id){
         $totalPrice = [];
         $user = Auth::user()->id;
-        $shopId = $request->query('param');
+        $shopId = $request->query('shop_id');
         $products = [ ];
         for ($i=0; $i < count($request['purchase']); $i++) {
             // foreach of the object update if id exists and create new if not exists
