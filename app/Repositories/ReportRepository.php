@@ -326,6 +326,7 @@ public function downloadReport($request)
                 "profit_margin" => $net_profit_margin
             ]
         ],
+        "stock_analysis" => $this->getProductStockAnlysis($start_date, $end_date, $shopId),
         "revenue" => [
             "total_revenue" => $turnover,
             "sales_by_product" => $sales_by_product,
@@ -521,5 +522,42 @@ public function getSalesByProduct($start_date, $end_date, $shopId)
     } catch (\Exception $e) {
         return $e->getMessage();
     }
+}
+
+public function getProductStockAnlysis($start_date, $end_date, $shopId)
+{
+   // foreach product get how many was purchased between start date and end date
+    // foreach product get how many was sold between start date and end date
+        // should be in a table like product_name | purchased | sold | stock_left
+    
+    $products = applyShopFilter(Product::with('category')->with('images'), $shopId)->get();
+
+    $productStockAnalysis = [];
+    foreach ($products as $product) {
+        // products purchased 
+        $purchases = PurchaseDetails::where('product_id', $product->id)
+            ->whereBetween('created_at', [$start_date, $end_date]);
+        
+        $purchase_qty = $purchases->sum( 'qty');
+        // products sold
+        $sales = Sale::where('product_id', $product->id)
+            ->whereBetween('created_at', [$start_date, $end_date]);
+        $sales_qty = $sales->sum( DB::raw('qty'));
+        // stock left
+        $stock_left = $purchase_qty - $sales_qty;
+        $cost_price = $purchase_qty == 0 ? ($purchases->sum(DB::raw('cost * qty')) * $sales_qty) : ($purchases->sum(DB::raw('cost * qty')) * $sales_qty)/$purchase_qty; //for what was sold
+        $sales_price = $sales->sum(DB::raw('price * qty'));
+        $productStockAnalysis[] = [
+            'product_name' => $product->name,
+            'purchased' => $purchase_qty,
+            'sold' => $sales_qty,
+            'stock_left' => $stock_left,
+            'cost_price' => $cost_price,
+            'cost_price_per_product' => $purchases->sum(DB::raw('cost')),
+            'sales_price' => $sales_price,
+            'gross_profit' => $sales_price - $cost_price,
+        ];
+    }  
+    return $productStockAnalysis;
 }
 }
