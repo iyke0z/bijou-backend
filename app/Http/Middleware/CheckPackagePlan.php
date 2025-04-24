@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Purchase;
+use App\Models\SubscriptionLog;
 use Closure;
 use Illuminate\Http\Request;
 
@@ -14,7 +15,7 @@ class CheckPackagePlan
         $routeName = $request->route()->getName();
         
         // Retrieve the package_id from query parameters
-        $packageId = $request->query('package_id');
+        $packageId = SubscriptionLog::latest()->first()->package_id ?? 1; // Default to 1 if no package_id is found
 
         // Define the package limits for both monthly and annual packages
         $packageLimits = [
