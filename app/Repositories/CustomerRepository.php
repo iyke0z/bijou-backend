@@ -45,9 +45,30 @@ class CustomerRepository implements CustomerRepositoryInterface{
     }
 
     public function fund_customer($request, $id){
-        $customer = Customer::find($id);
+        if($id == 0){
+            $customerExists = Customer::where('email', $request['email'])->first();
+            if($customerExists){
+                $this->fund_wallet($customerExists, $request, $customerExists->id);
+                
+            }else{
 
-        if($customer->exists()){
+                $customer = Customer::create([
+                    "fullname"=>$request["fullname"],
+                    "address"=>"NA",
+                    "phone"=>$request["phone"],
+                    "customer_type"=>'walk_in',
+                    "email"=>$request["email"],
+                    "wallet_balance"=>0
+                ]);
+
+                $this->fund_wallet($customer, $request, $customer->id);
+            }
+            return res_completed('Account Credited Successfully');
+
+        }else{
+            $customer = Customer::find($id);
+
+        // if($customer->exists()){
             if ($request['platform'] == 'online') {
                 // payment gateway
                 $this->fund_wallet($customer, $request, $id);
@@ -56,7 +77,7 @@ class CustomerRepository implements CustomerRepositoryInterface{
             }
             return res_completed('Account Credited Successfully');
         }
-        return res_not_found('Account does not exist');
+        // return res_not_found('Account does not exist');
     }
 
     public function fund_wallet($customer, $request, $id){

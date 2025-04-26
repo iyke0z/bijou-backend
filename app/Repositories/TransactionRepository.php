@@ -64,8 +64,28 @@ class TransactionRepository implements TransactionRepositoryInterface{
     }
     public function sell($request){
         $auth = WaiterCode::where('code', $request["auth_code"])->first();
+        if(!$auth){
+            return res_unauthorized('Unauthorized Generate Sales Code');
+        }
         $shopId = request()->query('shop_id');
         if($auth->exists()){    
+            if(isset($request['customer_email']) && $request['customer_email'] != null) {
+                $customer = Customer::where('email', $request['customer_email'])->first();
+                if($customer){
+                    $request['customer_id'] = $customer->id;
+                }else{
+                    $customer = Customer::create([
+                        'fullname' => $request['customer_name'],
+                        'email' => $request['customer_email'],
+                        'phone' => $request['customer_phone'],
+                        'address' => "NA",
+                        'shop_id' => $shopId,
+                        'wallet_balance' => 0,
+                        'customer_type' => 'walk_in',
+                    ]);
+                    $request['customer_id'] = $customer->id;
+                }
+            }
             // create new transaction
             $transaction = new Transaction();
             $transaction->platform = 'online';
@@ -84,7 +104,8 @@ class TransactionRepository implements TransactionRepositoryInterface{
             $transaction->discount = $request['discount'];
             $transaction->vat = $request['vat'];
             $transaction->save();
-
+            // 
+           
             // register ledger
 
             // if logistics is greater than 0, transfer to logistics account

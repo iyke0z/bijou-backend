@@ -55,6 +55,9 @@ class CreateSalesRequest extends FormRequest
             'payment_type' => 'sometimes',
             'monthly_value' => 'sometimes',
             'posting_day' => 'sometimes',
+            'customer_name' => 'sometimes',
+            'customer_email' => 'sometimes',
+            'customer_phone' => 'sometimes',
         ];
     }
 }
