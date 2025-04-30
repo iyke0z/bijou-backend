@@ -24,7 +24,7 @@ jobs:
           target: ${{ secrets.FTP_PATH }}/business_sites/24hrs/api/  # Target directory on the server
           port: 22
           script: |
-            cd /home/ngmktsit/www/business_sites/flexglobalprime/api  # Navigate to the second folder
+            cd /home/ngmktsit/www/business_sites/24hrs/api  # Navigate to the second folder
             php artisan clean
             php artisan migrate
           
@@ -35,7 +35,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}  # SSH username
           password: ${{ secrets.FTP_PASSWORD }}  # SSH password
           source: ./                         # Local directory with test files
-          target: ${{ secrets.FTP_PATH }}/business_sites/24hrs/api/  # Target directory on the server
+          target: ${{ secrets.FTP_PATH }}/business_sites/flexglobalprime/api/  # Target directory on the server
           port: 22
           script: |
             cd /home/ngmktsit/www/business_sites/flexglobalprime/api  # Navigate to the second folder
@@ -49,7 +49,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}  # SSH username
           password: ${{ secrets.FTP_PASSWORD }}  # SSH password
           source: ./                         # Local directory with test files
-          target: ${{ secrets.FTP_PATH }}/business_sites/24hrs/api/  # Target directory on the server
+          target: ${{ secrets.FTP_PATH }}/business_sites/munchiesevents/api/  # Target directory on the server
           port: 22
           script: |
             cd /home/ngmktsit/www/business_sites/munchiesevents/api  # Navigate to the second folder
@@ -63,7 +63,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}  # SSH username
           password: ${{ secrets.FTP_PASSWORD }}  # SSH password
           source: ./                         # Local directory with test files
-          target: ${{ secrets.FTP_PATH }}/business_sites/24hrs/api/  # Target directory on the server
+          target: ${{ secrets.FTP_PATH }}/business_sites/dami/api/  # Target directory on the server
           port: 22
           script: |
             cd /home/ngmktsit/www/business_sites/dami/api  # Navigate to the second folder
@@ -77,7 +77,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}  # SSH username
           password: ${{ secrets.FTP_PASSWORD }}  # SSH password
           source: ./                         # Local directory with test files
-          target: ${{ secrets.FTP_PATH }}/business_sites/24hrs/api/  # Target directory on the server
+          target: ${{ secrets.FTP_PATH }}/business_sites/crestgrandeur/api/  # Target directory on the server
           port: 22
           script: |
             cd /home/ngmktsit/www/business_sites/crestgrandeur/api  # Navigate to the second folder
@@ -91,7 +91,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}  # SSH username
           password: ${{ secrets.FTP_PASSWORD }}  # SSH password
           source: ./                         # Local directory with test files
-          target: ${{ secrets.FTP_PATH }}/business_sites/24hrs/api/  # Target directory on the server
+          target: ${{ secrets.FTP_PATH }}/business_sites/lola/api/  # Target directory on the server
           port: 22
           script: |
             cd /home/ngmktsit/www/business_sites/lola/api  # Navigate to the second folder
@@ -105,7 +105,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}  # SSH username
           password: ${{ secrets.FTP_PASSWORD }}  # SSH password
           source: ./                         # Local directory with test files
-          target: ${{ secrets.FTP_PATH }}/business_sites/24hrs/api/  # Target directory on the server
+          target: ${{ secrets.FTP_PATH }}/business_sites/mammanativekichen/api/  # Target directory on the server
           port: 22
           script: |
             cd /home/ngmktsit/www/business_sites/mammanativekichen/api  # Navigate to the second folder
@@ -118,6 +118,8 @@ jobs:
           host: ${{ secrets.FTP_HOST }}          # Server hostname
           username: ${{ secrets.FTP_USERNAME }}  # SSH username
           password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+          source: ./                         # Local directory with test files
+          target: ${{ secrets.FTP_PATH }}/business_sites/alec/api/  # Target directory on the server
           port: 22                               # SSH port
           script: |
             cd /home/ngmktsit/www/business_sites/alec/api  # Navigate to the second folder
