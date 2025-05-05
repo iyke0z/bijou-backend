@@ -71,7 +71,9 @@ class ProductRepository implements ProductRepositoryInterface{
                     "stock" => $request['products'][$i]["stock"],
                     "price" => $request['products'][$i]["price"],
                     "code" => $request['products'][$i]["code"],
-                    "shop_id" => $shopId ]
+                    "shop_id" => $shopId,
+                    "show_on_website" => $request['products'][$i]["show_on_website"],
+                    ]
                 );
             }else{
                 array_push($already_exists, strtolower($request['products'][$i]['name']));
@@ -98,7 +100,9 @@ class ProductRepository implements ProductRepositoryInterface{
                         'category_id' => $request['category_id'],
                         'stock' => $request['stock'],
                         'price' => $request['price'],
-                        'code' => $request['code']
+                        'code' => $request['code'],
+                        'show_on_website' => $request['show_on_website'],
+                        'description' => $request['material'],
                     ]);
                     $user = Auth::user()->id;
                     ProductTrait::log_product($id, 'update', $request['stock'], $request['price'], $user, $shopId);

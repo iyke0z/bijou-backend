@@ -29,6 +29,8 @@ class UpdateProductRequest extends FormRequest
             "stock"=>"nullable",
             "price"=>"required",
             "code"=>"sometimes",
+            "show_on_website" => "sometimes",
+            "material" => "sometimes",
         ];
     }
 }

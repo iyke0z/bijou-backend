@@ -255,6 +255,195 @@ class TransactionRepository implements TransactionRepositoryInterface{
         return res_unauthorized('Unauthorized');
 
     }
+
+    public function sellOnline($request){
+        $shopId = request()->query('shop_id');
+            if(isset($request['customer_email']) && $request['customer_email'] != null) {
+                $customer = Customer::where('email', $request['customer_email'])->first();
+                if($customer){
+                    $request['customer_id'] = $customer->id;
+                }else{
+                    $customer = Customer::create([
+                        'fullname' => $request['customer_name'],
+                        'email' => $request['customer_email'],
+                        'phone' => $request['customer_phone'],
+                        'address' => "NA",
+                        'shop_id' => $shopId,
+                        'wallet_balance' => 0,
+                        'customer_type' => 'walk_in',
+                    ]);
+                    $request['customer_id'] = $customer->id;
+                }
+            }
+            // create new transaction
+            $transaction = new Transaction();
+            $transaction->platform = 'online';
+            $transaction->user_id = 1;
+            $transaction->status =  $request['is_order'] == true ? "pending" : "completed";
+            $request['is_order'] == false ? $transaction->type = $request['type'] : null;
+            $request['is_order'] == false ? $transaction->amount  = $request['amount'] : null;
+            $request['is_order'] == false ? $transaction->payment_method = $request['payment_method'] : null;
+            $request['payment_method'] == "part_payment" ? $transaction->payment_method = "on_credit" : $transaction->payment_method =  $request['payment_method'];
+            $request['payment_method'] == "part_payment" ? $transaction->is_part_payment = 1 : 0;
+            $request['payment_method'] == "part_payment" ? $transaction->part_payment_amount = $request['part_payment_amount'] : 0;
+            $transaction->is_split_payment = $request['is_split_payment'];
+            $transaction->table_description = $request['description'];
+            $transaction->customer_id = $request['customer_id'] ?? $request['customer_id'];
+            $transaction->shop_id = $shopId;
+            $transaction->discount = $request['discount'];
+            $transaction->vat = $request['vat'];
+            $transaction->save();
+            // 
+           
+            // register ledger
+
+            // if logistics is greater than 0, transfer to logistics account
+            if($request['logistics'] > 0){
+                $previous_balance = LogisticsAccount::get()->last()->current_balancee ?? 0;
+                $current_balance = $previous_balance + intval($request['logistics']);
+                LogisticsAccount::create([
+                    "transaction_id" => $transaction->id,
+                    "amount" => $request['logistics'],
+                    "type" => 'credit',
+                    'shop_id' => $shopId,
+                    "previous_balance" => $previous_balance ?? 0,
+                    "current_balance" => $current_balance
+                ]);
+            }
+
+           
+            // create new sales order
+            $totalCost = 0;
+            $isNegativeStock = false;
+            
+            // first process sales and determine if any are negative
+            foreach ($request['products'] as $productData) {
+                $product = applyShopFilter(Product::with('category')->where('id', $productData["product_id"]), $shopId)->first();
+                
+                if($product->category->has_stock == 1){
+                    $product->stock -= $productData["qty"];
+                    $product->save();
+                }
+            
+                $afterStock = $product->stock;
+                $costPrice = getCostPrice($productData["product_id"], $productData["qty"]); //if the product does not have_Stock, cost price is zero, and do not debit inventory
+                $totalCost += $costPrice;
+            
+                $sale = new Sale();
+                $sale->product_id = $productData["product_id"];
+                $sale->ref = $transaction->id;
+                $sale->price = $productData["price"];
+                $sale->qty = $productData["qty"];
+                $sale->user_id = 1; // Assuming the user ID is 1 for online sales
+                $sale->shop_id = $shopId;
+                $sale->previous_stock = $product->stock + $productData["qty"];
+                $sale->is_negative_sale = $afterStock < 0;
+                if ($afterStock < 0) {
+                    $isNegativeStock = true;
+                    $sale->no_of_items = abs($afterStock);
+                }
+                $sale->save();
+            }
+            
+            // Now call registerLedger just once per payment method
+            if ($request['is_split_payment']) {
+                foreach ($request["split"] as $split) {
+                    $split_payment = new SplitPayments();
+                    $split_payment->transaction_id = $transaction->id;
+                    $split_payment->payment_method = $split["split_playment_method"];
+                    $split_payment->amount = $split["split_payment_amount"];
+                    $split_payment->bank_id = $split["bank_id"];
+                    $split_payment->shop_id = $shopId;
+                    $split_payment->save();
+            
+                    registerLedger(
+                        $isNegativeStock ? 'negative_stock' : 'sales',
+                        'sales_'.$transaction->id,
+                        $split['split_payment_amount'],
+                        $shopId,
+                        $request['type'],
+                        $split['split_playment_method'],
+                        $request['logistics'] ?? 0,
+                        0, // part_payment_amount (already handled)
+                        $totalCost
+                    );
+                }
+            } else {
+                registerLedger(
+                    $isNegativeStock ? 'negative_stock' : 'sales',
+                    'sales_'.$transaction->id,
+                    $request['amount'],
+                    $shopId,
+                    $request['type'],
+                    $request['payment_method'],
+                    $request['logistics'] ?? 0,
+                    $request['part_payment_amount'] ?? 0,
+                    $totalCost
+                );
+            }
+            
+            if($request['payment_method'] == "wallet" || $request['type'] == 'on_credit'){
+                $customer = Customer::find($request["customer_id"]);
+                $customer->wallet_balance = $customer->wallet_balance - $request["amount"];
+                $customer->save();
+            }
+
+            if($request['payment_type']  == 'prepayment' || $request['payment_type'] == 'postpayment'){
+                // update transaction
+                $transaction = Transaction::where('id', $transaction->id)->first();
+                $transaction->amount = $request["amount"];
+                $transaction->start_date = $request["start_date"];
+                $transaction->end_date = $request["end_date"];
+                $transaction->payment_type = $request["payment_type"];
+                $transaction->monthly_value = $request['amount']/Carbon::parse($request['start_date'])->diffInMonths(Carbon::parse($request['end_date']));
+                $transaction->posting_day = $request["posting_day"];
+                $transaction->save();
+
+                // register ledger
+                registerLedger(
+                    'sales',
+                    'sales_'.$transaction->id,
+                    $request['amount'],
+                    $shopId,
+                    $request['payment_type'],
+                    $request['payment_method'],
+                    $request['logistics'] ?? 0,
+                    0, // part_payment_amount (already handled)
+                    $totalCost,
+                );
+
+            }
+            
+            if($request['type'] == "part_payment"){
+                $customer = Customer::find($request["customer_id"]);
+                $customer->wallet_balance = $customer->wallet_balance - ($request["amount"] - $request["part_payment_amount"]);
+                $customer->save();
+
+                bankService(
+                    $request['amount'], 
+                    "SALES PART PAYMENT", 
+                    $transaction->id,
+                    $shopId,
+                    "CREDIT"
+                );
+            }
+
+            if ( $request['is_order'] == false && $request['type'] == "on_credit" || $request['type'] != 'part_payment_amount') {
+                bankService(
+                    $request['amount'], 
+                    "SALES", 
+                    $transaction->id,
+                    $shopId,
+                    "CREDIT"
+                );
+            }
+            
+            return res_success('sale order created', $sale);
+        
+
+        return res_unauthorized('Unauthorized');
+
+    }
     public function update_sale($request){
         $auth = WaiterCode::where('code', $request["auth_code"])->first();
 

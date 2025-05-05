@@ -4,6 +4,7 @@ namespace App\Interfaces;
 
 interface TransactionRepositoryInterface{
     public function sell($request);
+    public function sellOnline($request);
     public function update_sale($request);
     public function delete_sale($id);
     public function create_discount($request);

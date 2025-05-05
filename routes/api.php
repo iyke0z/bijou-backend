@@ -15,6 +15,7 @@ use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WebHookController;
+use App\Http\Controllers\WebsiteController;
 use App\Interfaces\TransactionRepositoryInterface;
 use App\Models\ExpenditureType;
 use Illuminate\Http\Request;
@@ -42,9 +43,21 @@ Route::post('/webhook', [WebHookController::class, 'webHookHandler']);
 Route::post('/sales-performance', [ReportController::class, 'getSalesPerformance']);
 
 Route::prefix('v1')->group(function (){
+    Route::get('/get-web-products', [ProductController::class, 'fetchWebsiteProducts'])->middleware('IaActive');
     Route::get('/business/details', [AuthController::class, 'show_business']);
+    Route::post('/sell-online', [TransactionController::class, 'sellOnline'])->name('create_transaction')->middleware(['IaActive', 'CheckPackagePlan']);
     Route::get('/user-count', [SuperAdminController::class, 'userCount']);
-
+    Route::get('website/about', [WebsiteController::class, 'showAbout']);
+    Route::get('website/contact', [WebsiteController::class, 'showContact']);
+    Route::get('website/faq', [WebsiteController::class, 'showFAQ']);
+    Route::get('website/hero', [WebsiteController::class, 'showHeroBanners']);
+    Route::get('website/payment-config', [WebsiteController::class, 'showPaymentConfig']);
+    Route::get('website/theme-config', [WebsiteController::class, 'showThemeSettings']);
+    Route::get('website/return-policy', [WebsiteController::class, 'showReturnPolicy']);
+    Route::get('website/settings', [WebsiteController::class, 'showSettings']);
+    Route::get('website/social-links', [WebsiteController::class, 'showSocialLinks']);
+    Route::get('website/business-details', [WebsiteController::class, 'businessDetails']);
+    
     Route::prefix('admin')->group(function () {
         Route::get('packages/', [SuperAdminController::class, 'getPackages']);
         Route::post('create-package', [SuperAdminController::class, 'createPackage']);
@@ -119,6 +132,8 @@ Route::prefix('v1')->group(function (){
             Route::post('/report/{id}', [ProductController::class, 'generate_product_report'])->middleware('IaActive');
             Route::post('/report/all/{id}', [ProductController::class, 'general_generate_product_report'])->middleware('IaActive');
             Route::post('/upload/image', [ProductController::class, 'upload_images'])->middleware('IaActive');
+            Route::post('/delete/image/{id}', [ProductController::class, 'delete_image'])->middleware('IaActive');
+            Route::post('/update-detail/{id}', [ProductController::class, 'updateProductDetail'])->middleware('IaActive');
         });
         Route::prefix('purchase')->middleware('checkPermission:can_manage_purchases')->group(function (){
             Route::post('/create', [ProductController::class, 'new_purchase'])->middleware('IaActive');
@@ -252,8 +267,26 @@ Route::prefix('v1')->group(function (){
             Route::get('/{goodsDeliveryNote}/download', [GoodDeliverNoteController::class, 'download'])->name('goods_delivery_notes.download');
         });
 
-
-        
+        Route::prefix('website')->group(function () {
+            Route::post('create-about', [WebsiteController::class, 'createAbout'])->middleware('IaActive');
+            Route::post('create-contact', [WebsiteController::class, 'createContact'])->middleware('IaActive');
+            Route::post('create-faq', [WebsiteController::class, 'createFAQ'])->middleware('IaActive');
+            Route::post('create-hero', [WebsiteController::class, 'createHeroBanner'])->middleware('IaActive');
+            Route::post('create-payment-config', [WebsiteController::class, 'createPaymentConfig'])->middleware('IaActive');
+            Route::post('create-theme-config', [WebsiteController::class, 'createThemeSettings'])->middleware('IaActive');
+            Route::post('create-return-policy', [WebsiteController::class, 'createReturnPolicy'])->middleware('IaActive');
+            Route::post('update-faq/{id}', [WebsiteController::class, 'updateFaq'])->middleware('IaActive');
+            Route::post('update-payment-config/{id}', [WebsiteController::class, 'updatePaymentConfig'])->middleware('IaActive');
+            Route::delete('delete-faq/{id}', [WebsiteController::class, 'deleteFAQ'])->middleware('IaActive');
+            Route::delete('delete-hero/{id}', [WebsiteController::class, 'deleteHeroBanner'])->middleware('IaActive');
+            Route::post('update-theme-config/{id}', [WebsiteController::class, 'updateThemeSettings'])->middleware('IaActive');    
+            Route::post('update-hero/{id}', [WebsiteController::class, 'updateHeroBanner'])->middleware('IaActive');
+            Route::delete('about-item/{id}', [WebsiteController::class, 'deleteAboutItem'])->middleware('IaActive');
+            Route::post('create-settings', [WebsiteController::class, 'updateSettings'])->middleware('IaActive');
+            Route::post('social-links', [WebsiteController::class, 'createSocialLinks'])->middleware('IaActive');
+            Route::delete('social-links/{id}', [WebsiteController::class, 'deleteSocialLink'])->middleware('IaActive');
+            // Other routes...
+        });        
     });
 });
 

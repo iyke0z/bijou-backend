@@ -11,18 +11,24 @@ use App\Http\Requests\UpdateProductRequest;
 use App\Http\Requests\UpdatePurchaseRequest;
 use App\Http\Resources\CategoryResource;
 use App\Interfaces\ProductRepositoryInterface;
+use App\Models\BooksDetail;
+use App\Models\CarsDetail;
 use App\Models\Category;
+use App\Models\ClothingShoesDetail;
 use App\Models\ProductImages;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseDetails;
 use App\Models\PurchaseSupportingDocument;
+use App\Models\RealEstateDetail;
 use App\Models\SplitPayments;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use ZipArchive;
 
 class ProductController extends Controller
@@ -86,16 +92,23 @@ class ProductController extends Controller
         return res_success('report', $report);
     }
 
-    public function all_categories(Request $request){
+    public function all_categories(Request $request)
+    {
         $shopId = $request->query('shop_id');
-
-        $all_categories = applyShopFilter(Category::with('products'), $shopId)->get();
+    
+        $all_categories = applyShopFilter(
+            Category::with('products')->orderBy('name'), 
+            $shopId
+        )->get();
+    
         $categories = [];
         foreach ($all_categories as $category) {
             array_push($categories, new CategoryResource($category));
         }
+    
         return res_success('all categories', $categories);
     }
+    
 
     public function upload_images(Request $request){
         $picture = null;
@@ -103,11 +116,25 @@ class ProductController extends Controller
             $picture = Str::slug($request['product_id'], '-').time().'.'.$request['image']->extension();
             $request['image']->move(public_path('images/product'), $picture);
         }
-        $data = ["product_id"=> $request['product_id'], "image" => $picture];
+        $data = ["product_id"=> $request['product_id'], "image" => $picture, "title" => $request['title']];
 
         ProductImages::create($data);
 
         return res_completed('images stored');
+    }
+
+    public function delete_image($id){
+        $image = ProductImages::find($id);
+        if ($image) {
+            $imagePath = public_path('images/product/' . $image->image);
+            if (file_exists($imagePath)) {
+                unlink($imagePath);
+            }
+            $image->delete();
+            return res_completed('deleted');
+        } else {
+            return res_not_found('Image not found');
+        }
     }
 
     public function new_purchase(CreatePurchaseRequest $request){
@@ -378,7 +405,306 @@ class ProductController extends Controller
         return response()->download($zipPath)->deleteFileAfterSend(true);
     }
 
+        public function updateProductDetail($id, Request $request){
+            // Validate request
+            $validator = Validator::make($request->all(), [
+                'sizes' => 'nullable|array',
+                'colors' => 'nullable|array',
+                'material' => 'nullable|string|max:100',
+                'style' => 'nullable|string|max:50',
+                'author' => 'nullable|string|max:100',
+                'isbn' => 'nullable|string|max:20',
+                'genre' => 'nullable|string|max:50',
+                'publication_date' => 'nullable|date',
+                'format' => 'nullable|array',
+                'location' => 'nullable|string|max:255',
+                'type' => 'nullable|string|max:50',
+                'bedrooms' => 'nullable|integer|min:0',
+                'bathrooms' => 'nullable|integer|min:0',
+                'square_footage' => 'nullable|integer|min:0',
+                'contact_email' => 'nullable|email|max:100',
+                'contact_phone' => 'nullable|string|max:20',
+                'make' => 'nullable|string|max:50',
+                'model' => 'nullable|string|max:50',
+                'year' => 'nullable|integer|min:1900|max:'.(date('Y') + 1),
+                'mileage' => 'nullable|integer|min:0',
+                'fuel_type' => 'nullable|string|max:20',
+            ]);
+    
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+    
+            try {
+                // Start transaction
+                DB::beginTransaction();
+    
+                // Fetch product
+                $product = Product::find($id);
+                if (!$product) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Product not found'
+                    ], 404);
+                }
+    
+                // Fetch category
+                $category = Category::where('id', $product->category_id)->first();
+                if (!$category) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Category not found'
+                    ], 404);
+                }
+    
+                $detail = null;
 
-}
+                // Update based on category
+                switch ($category->name) {
+                    case 'clothing':
+                    case 'shoes':
+                        $existingDetail = ClothingShoesDetail::where('product_id', $id)->first();
+                        if ($existingDetail) {
+                            $existingDetail->delete();
+                        }
+                        $detail = ClothingShoesDetail::updateOrCreate(
+                            [
+                                'product_id' => $id,
+                                'sizes' => implode(',', $request->input('sizes') ),
+                                'colors' => implode(',', $request->input('colors')),
+                                'material' => $request->input('material'),
+                                'style' => $request->input('style')
+                            ]
+                        );
+                        break;
+    
+                    case 'books':
+                        $existingDetail = BooksDetail::where('product_id', $id)->first();
+                        if ($existingDetail) {
+                            $existingDetail->delete();
+                        }
+                        $detail = BooksDetail::updateOrCreate(
+                            ['product_id' => $id,
+                                'author' => $request->input('author'),
+                                'isbn' => $request->input('isbn'),
+                                'genre' => $request->input('genre'),
+                                'publication_date' => $request->input('publication_date'),
+                                'format' => implode(',', $request->input('format'))
+                            ]
+                        );
+                        break;
+    
+                    case 'real_estate':
+                        $existingDetail = RealEstateDetail::where('product_id', $id)->first();
+                        if ($existingDetail) {
+                            $existingDetail->delete();
+                        }
+                        $detail = RealEstateDetail::updateOrCreate(
+                            ['product_id' => $id,
+                                'location' => $request->input('location'),
+                                'type' => $request->input('type'),
+                                'bedrooms' => $request->input('bedrooms'),
+                                'bathrooms' => $request->input('bathrooms'),
+                                'square_footage' => $request->input('square_footage'),
+                                'contact_email' => $request->input('contact_email'),
+                                'contact_phone' => $request->input('contact_phone')
+                            ]
+                        );
+                        break;
+    
+                    case 'cars':
+                        $existingDetail = CarsDetail::where('product_id', $id)->first();
+                        if ($existingDetail) {
+                            $existingDetail->delete();
+                        }
+                        $detail = CarsDetail::updateOrCreate(
+                            ['product_id' => $id,
+                                'make' => $request->input('make'),
+                                'model' => $request->input('model'),
+                                'year' => $request->input('year'),
+                                'mileage' => $request->input('mileage'),
+                                'fuel_type' => $request->input('fuel_type'),
+                                'contact_email' => $request->input('contact_email'),
+                                'contact_phone' => $request->input('contact_phone')
+                            ]
+                        );
+                        break;
+    
+                    default:
+                        $existingDetail = Product::where('id', $id)->first();
+                        if ($existingDetail) {
+                            $existingDetail->delete();
+                        }
+                        $product->details = [
+                            'material' => $request->input('material')
+                        ];
+                        $product->save();
+                        $detail = $product;
+                        break;
+                }
+    
+                DB::commit();
+    
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Product details updated successfully',
+                    'data' => $detail
+                ], 200);
+    
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to update product details',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+        }
+    
+        /**
+         * Fetch products for website (shop_id = 1) with adjusted shape based on category.
+         *
+         * @return \Illuminate\Http\JsonResponse
+         */
+        public function fetchWebsiteProducts()
+        {
+                // Fetch products with relationships
+                $products = Product::with(['category', 'images', 'clothingShoesDetail', 'booksDetail', 'realEstateDetail', 'carsDetail'])
+                    ->where('shop_id', 1)
+                    ->where('show_on_website', 1)
+                    ->get();
+                // return response()->json($products);
+                $response = [];
+                
+                foreach ($products as $product) {
+                    $category = $product->category->name;
+                    $product_data = null; // Initialize details to null
+
+                    switch ($product->category->name) {
+                        case 'clothing':
+                            $product_data = [
+                                    "id" => $product->id,
+                                    "category" => $category,
+                                    "name" => $product->name,
+                                    "price" => $product->price,
+                                    "image" => $product->images[0]->image ?? null,
+                                    "colorImages" => $product->images->pluck('image', 'title')->toArray(),
+                                    "description" => $product->material,
+                                    "sizes" => explode(',', $product->clothingShoesDetail[0]->sizes ?? null),
+                                    "colors" => explode(',', $product->clothingShoesDetail[0]->colors ?? null),
+                                    "material" => $product->clothingShoesDetail[0]->material ?? null,
+                                    "style" => $product->clothingShoesDetail[0]->style ?? null,
+                                    "stock" => $product->stock,
+                            ];
+
+                            $response[] = $product_data;
+                            break;
+                        case 'shoes':
+                                $product_data = [
+                                        "id" => $product->id,
+                                        "category" => $category,
+                                        "name" => $product->name,
+                                        "price" => $product->price,
+                                        "image" => $product->images[0]->image ?? null,
+                                        "colorImages" => $product->images->pluck('image', 'title')->toArray(),
+                                        "description" => $product->material,
+                                        "sizes" => explode(',', $product->clothingShoesDetail[0]->sizes ?? null),
+                                        "colors" => explode(',', $product->clothingShoesDetail[0]->colors ?? null),
+                                        "material" => $product->clothingShoesDetail[0]->material ?? null,
+                                        "style" => $product->clothingShoesDetail[0]->style ?? null,
+                                        "stock" => $product->stock,
+                                ];
+    
+                                $response[] = $product_data;
+                                break;
+                        case 'books':
+                            $product_data = [
+                                "id" => $product->id,
+                                "category" => $category,
+                                "name" => $product->name,
+                                "price" => $product->price,
+                                "image" => $product->images[0]->image ?? null,
+                                "imageViews" => $product->images->pluck('image', 'title')->toArray(),
+                                "description" => $product->material,
+                                "author" => $product->booksDetail[0]->author ?? null,
+                                "isbn" => $product->booksDetail[0]->isbn ?? null,
+                                "genre" => $product->booksDetail[0]->genre ?? null,
+                                "publication_date" => $product->booksDetail[0]->publication_date ?? null,
+                                "format" => explode(',', $product->booksDetail[0]->format ?? null),
+                                "stock" => $product->stock,
+                            ];
+    
+                            $response[] = $product_data;
+                            break;
+                        case 'real_estate':
+                            $product_data = [
+                                "id" => $product->id,
+                                "category" => $category,
+                                "name" => $product->name,
+                                "price" => $product->price,
+                                "image" => $product->images[0]->image ?? null,
+                                "imageViews" => $product->images->pluck('image', 'title')->toArray(),
+                                "description" => $product->material,
+                                "location" => $product->realEstateDetail[0]->location ?? null,
+                                "type" => $product->realEstateDetail[0]->type ?? null,
+                                "bedrooms" => $product->realEstateDetail[0]->bedrooms ?? null,
+                                "bathrooms" => $product->realEstateDetail[0]->bathrooms ?? null,
+                                "square_footage" => $product->realEstateDetail[0]->square_footage ?? null,
+                                "contact_email" => $product->realEstateDetail[0]->contact_email ?? null,
+                                "contact_phone" => $product->realEstateDetail[0]->contact_phone ?? null,
+                                "stock" => $product->stock,
+                            ];
+    
+                            $response[] = $product_data;
+                            break;
+                        case 'cars':
+                            $product_data = [
+                                "id" => $product->id,
+                                "category" => $category,
+                                "name" => $product->name,
+                                "price" => $product->price,
+                                "image" => $product->images[0]->image ?? null,
+                                "imageViews" => $product->images->pluck('image', 'title')->toArray(),
+                                "description" => $product->material,
+                                "make" => $product->carsDetail[0]->make ?? null,
+                                "model" => $product->carsDetail[0]->model ?? null,
+                                "year" => $product->carsDetail[0]->year ?? null,
+                                "mileage" => $product->carsDetail[0]->mileage ?? null,
+                                "fuel_type" => $product->carsDetail[0]->fuel_type ?? null,
+                                "contact_email" => $product->carsDetail[0]->contact_email ?? null,
+                                "contact_phone" => $product->carsDetail[0]->contact_phone ?? null,
+                                "stock" => $product->stock,
+                            ];
+    
+                            $response[] = $product_data;
+                            break;
+                        default:
+                            $product_data = [
+                                "id" => $product->id,
+                                "category" => $category,
+                                "name" => $product->name,
+                                "price" => $product->price,
+                                "image" => $product->images[0]->image ?? null,
+                                "description" => $product->material,
+                                "stock" => $product->stock,
+                            ];
+                            break;
+                    }
+
+                }
+    
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Products fetched successfully',
+                    'data' => $response,
+                ], 200);
+            
+        }
+    }
+
 
 

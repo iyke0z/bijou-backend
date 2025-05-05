@@ -19,13 +19,26 @@ class CategorySeeder extends Seeder
                 "Drinks",
                 "Cocktail",
                 "Mocktail",
+                "clothing",
+                "books",
+                "shoes",
+                "real_estate",
+                "cars",
+                "accessories"
         ];
 
         for ($i=0; $i < count($dat) ; $i++) {
             $name = [
               "name" => $dat[$i]
             ];
-            Category::create($name);
+
+            $categoryExists = Category::where('name', $dat[$i])->first();
+
+            if ($categoryExists) {
+                # code...
+            }else{
+                Category::create($name);
+            }
         }
     }
 }

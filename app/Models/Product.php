@@ -36,5 +36,18 @@ class Product extends Model
     public function transferHistory(){
         return $this->hasMany(StrockTransaction::class, 'product_id');
     }
+
+    public function clothingShoesDetail(){
+        return $this->hasMany(ClothingShoesDetail::class, 'product_id');
+    }
+    public function booksDetail(){
+        return $this->hasMany(BooksDetail::class, 'product_id');
+    }
+    public function realEstateDetail(){
+        return $this->hasMany(RealEstateDetail::class, 'product_id');
+    }
+    public function carsDetail(){
+        return $this->hasMany(CarsDetail::class, 'product_id');
+    }
 }
 

@@ -35,7 +35,8 @@ class UpdateBusinessDetailsRequest extends FormRequest
             "expiry_date"=>'sometimes',
             "times" => "sometimes",
             "is_negative_stock" => "sometimes",
-            "owner_equity" => "sometimes"
+            "owner_equity" => "sometimes",
+            "logistics_fee" => "sometimes"
         ];
     }
 }
