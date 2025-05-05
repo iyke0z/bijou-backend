@@ -292,9 +292,9 @@ public function downloadReport($request)
 
     // Calculate key metrics
     $gross_profit = $turnover - $cogs;
-    $net_profit = $gross_profit - $opex;
+    $net_profit = $gross_profit - $total_expenditure;
     $net_profit_margin = $turnover > 0 ? ($net_profit / $turnover) * 100 : 0;
-    $ebit = $gross_profit - $opex;
+    $ebit = $turnover - $cogs - $opex;
     $roi = $total_expenditure > 0 ? ($net_profit / $total_expenditure) * 100 : 0;
 
     // Additional Balance Sheet items
