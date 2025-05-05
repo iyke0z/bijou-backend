@@ -169,7 +169,6 @@ public function downloadReport($request)
             case 'cost_of_goods_sold':
                 if ($type === 'debit') {
                     $cogs += $amount;
-                    $total_expenditure += $amount;
                 }
                 break;
 
@@ -183,10 +182,16 @@ public function downloadReport($request)
 
             case 'cash':
                 $cash_balance += ($type === 'debit') ? $amount : -$amount;
+                if ($type === 'credit' && str_starts_with($entry->transaction_id, 'purch_') || str_starts_with($entry->transaction_id, 'exp_')) {
+                    $total_expenditure += $amount;
+                }
                 break;
 
             case 'bank':
                 $bank_balance += ($type === 'debit') ? $amount : -$amount;
+                if ($type === 'credit' && str_starts_with($entry->transaction_id, 'purch_') || str_starts_with($entry->transaction_id, 'exp_')) {
+                    $total_expenditure += $amount;
+                }
                 break;
 
             case 'accounts_payable':
