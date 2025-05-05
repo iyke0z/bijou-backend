@@ -689,9 +689,10 @@ class ProductController extends Controller
                                 "name" => $product->name,
                                 "price" => $product->price,
                                 "image" => $product->images[0]->image ?? null,
-                                "description" => $product->material,
+                                "description" => $product->description,
                                 "stock" => $product->stock,
                             ];
+                            $response[] = $product_data;
                             break;
                     }
 

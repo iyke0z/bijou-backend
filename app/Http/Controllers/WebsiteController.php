@@ -116,7 +116,7 @@ class WebsiteController extends Controller
     public function createHeroBanner(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif',
             'title' => 'required|string|max:255',
             'description' => 'required|string|max:255',
         ]);
@@ -140,7 +140,7 @@ class WebsiteController extends Controller
     public function updateHeroBanner(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'image' => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image' => 'sometimes|image|mimes:jpeg,png,jpg,gif',
             'title' => 'sometimes|string|max:255',
             'description' => 'sometimes|string|max:255',
         ]);
@@ -378,7 +378,7 @@ class WebsiteController extends Controller
             'email' => 'required|email|max:255',
             'phone' => 'required|string|max:255',
             'address' => 'required|string|max:255',
-            'image' => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image' => 'sometimes|image|mimes:jpeg,png,jpg,gif',
             'image_alt' => 'sometimes|string|max:255',
         ]);
 
