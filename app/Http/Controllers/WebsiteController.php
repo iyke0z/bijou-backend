@@ -231,8 +231,8 @@ class WebsiteController extends Controller
         try {
                 $settings = Setting::first();
                 $data = [
-                    'brand_name' => $settings ? $settings->brand_name : 'BasicsForWomen',
-                    'footer_description' => $settings ? $settings->footer_description : 'Sustainable, timeless fashion for the modern woman.',
+                    'brand_name' => $settings ? $settings->brand_name : 'My Shop',
+                    'footer_description' => $settings ? $settings->footer_description : 'I am a footer description',
                 ];
                 Log::info('Settings fetched successfully', ['data' => $data]);
                 return response()->json($data, 200);

@@ -22,12 +22,16 @@ jobs:
       - name: Get Changed Files
         id: changed-files
         run: |
-          # Get list of changed files between current and previous commit
-          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+          # Get commit SHA before the push (previous commit)
+          PREV_COMMIT=${{ github.event.before }}
+          # Get changed files, excluding deleted files
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACM $PREV_COMMIT HEAD || true)
           echo "Changed files: $CHANGED_FILES"
           # Convert to comma-separated list for scp-action
           CHANGED_FILES_COMMA=$(echo "$CHANGED_FILES" | tr '\n' ',' | sed 's/,$//')
           echo "changed_files=$CHANGED_FILES_COMMA" >> $GITHUB_OUTPUT
+          # Log for debugging
+          echo "Changed files (comma-separated): $CHANGED_FILES_COMMA"
 
       - name: Deploy to ${{ matrix.folder }}/api
         if: steps.changed-files.outputs.changed_files != ''  # Skip if no files changed
@@ -39,6 +43,8 @@ jobs:
           source: ${{ steps.changed-files.outputs.changed_files }}
           target: ${{ secrets.FTP_PATH }}/business_sites/${{ matrix.folder }}/api/
           port: 22
+          overwrite: true  # Overwrite existing files
+          debug: true     # Enable verbose logging
           script: |
             cd /home/ngmktsit/www/business_sites/${{ matrix.folder }}/api
             php artisan clean
@@ -56,3 +62,21 @@ jobs:
             cd /home/ngmktsit/www/business_sites/${{ matrix.folder }}/api
             php artisan clean
             php artisan migrate
+
+      # Fallback: Uncomment to upload all files if debugging fails
+      # - name: Fallback Deploy to ${{ matrix.folder }}/api (All Files)
+      #   if: steps.changed-files.outputs.changed_files == ''
+      #   uses: appleboy/scp-action@v0.1.5
+      #   with:
+      #     host: ${{ secrets.FTP_HOST }}
+      #     username: ${{ secrets.FTP_USERNAME }}
+      #     password: ${{ secrets.FTP_PASSWORD }}
+      #     source: ./
+      #     target: ${{ secrets.FTP_PATH }}/business_sites/${{ matrix.folder }}/api/
+      #     port: 22
+      #     overwrite: true
+      #     debug: true
+      #     script: |
+      #       cd /home/ngmktsit/www/business_sites/${{ matrix.folder }}/api
+      #       php artisan clean
+      #       php artisan migrate
