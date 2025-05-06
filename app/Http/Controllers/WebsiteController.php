@@ -645,7 +645,7 @@ class WebsiteController extends Controller
 
           return response()->json([
             'business' => [
-                'name' => $settings ? $settings->brand_name : 'BasicsForWomen',
+                'name' => $settings ? $settings->brand_name : 'My Shop',
                 'abn' => $businessDetails->phone_one,
                 'address' => $businessDetails->email ,
             ],
