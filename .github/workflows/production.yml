@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        folder: [24hrs, flexglobalprime, munchiesevents, dami, crestgrandeur, lola, mammanativekichen, alec, churchboymerch, edzain, eloka]
+        folder: [24hrs, flexglobalprime, munchiesevents, dami, crestgrandeur, lola, mammanativekichen, alec, churchboymerch, edzain, eloka, business]
 
     steps:
       - name: Checkout Repository
