@@ -1,81 +1,175 @@
-name: ngmkt production deploy
 
-on:
-  push:
-    branches:
-      - main
 
-jobs:
-  deploy:
-    name: Deploy Updated Files to Multiple Folders
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        folder: [24hrs, flexglobalprime, munchiesevents, dami, crestgrandeur, lola, mammanativekichen, alec, churchboymerch, edzain, eloka, business]
+      name: ngmkt production deploy
 
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 2  # Fetch current and previous commit for git diff
+      on:
+        push:
+          branches:
+            - main
 
-      # - name: Get Changed Files
-      #   id: changed-files
-      #   run: |
-      #     # Get commit SHA before the push (previous commit)
-      #     PREV_COMMIT=${{ github.event.before }}
-      #     # Get changed files, excluding deleted files
-      #     CHANGED_FILES=$(git diff --name-only --diff-filter=ACM $PREV_COMMIT HEAD || true)
-      #     echo "Changed files: $CHANGED_FILES"
-      #     # Convert to comma-separated list for scp-action
-      #     CHANGED_FILES_COMMA=$(echo "$CHANGED_FILES" | tr '\n' ',' | sed 's/,$//')
-      #     echo "changed_files=$CHANGED_FILES_COMMA" >> $GITHUB_OUTPUT
-      #     # Log for debugging
-      #     echo "Changed files (comma-separated): $CHANGED_FILES_COMMA"
+      jobs:
+        test-sftp:
+          name: Test SFTP Connection and Deploy to Multiple Folders
+          runs-on: ubuntu-latest
 
-      - name: Deploy to ${{ matrix.folder }}/api
-        uses: appleboy/scp-action@v0.1.5
-        with:
-          host: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          source: ${{ steps.changed-files.outputs.changed_files }}
-          target: ${{ secrets.FTP_PATH }}/business_sites/${{ matrix.folder }}/api/
-          port: 22
-          overwrite: true  # Overwrite existing files
-          debug: true     # Enable verbose logging
-          script: |
-            cd /home/ngmktsit/www/business_sites/${{ matrix.folder }}/api
-            php artisan clean
-            php artisan migrate
+          steps:
+            - name: Checkout Repository
+              uses: actions/checkout@v3
+              
+            - name: Identify Changed Folders
+              id: detect-changes
+              run: |
+                CHANGED_FOLDERS=$(git diff --dirstat=files,0 HEAD^ HEAD | cut -d'/' -f1 | sort -u | grep -E '24hrs|lola|mammanativekichen|alec|churchboymerch|edzain|eloka|business|flexglobalprime|munchiesevents|dami|crestgrandeur' || echo "")
+                echo "CHANGED_FOLDERS=$CHANGED_FOLDERS" >> $GITHUB_ENV
+                if [ -z "$CHANGED_FOLDERS" ]; then
+                  echo "No changes detected. Skipping deployment."
+                  exit 0
+                fi
+              
+            - name: Upload Files to 24hrs/api
+              uses: appleboy/scp-action@v0.1.5
+              with:
+                host: ${{ secrets.FTP_HOST }}    # Server hostname
+                username: ${{ secrets.FTP_USERNAME }}  # SFTP username
+                password: ${{ secrets.FTP_PASSWORD }}  # SFTP password
+                source: ./                         # Local directory with test files
+                target: ${{ secrets.FTP_PATH }}/business_sites/24hrs/api/  # Target directory on the server
+                port: 22
+                
+            - name: Run PHP Artisan Command on flexglobalprime/api
+              uses: appleboy/ssh-action@v0.1.6
+              with:
+                host: ${{ secrets.FTP_HOST }}          # Server hostname
+                username: ${{ secrets.FTP_USERNAME }}  # SSH username
+                password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+                source: ./                         # Local directory with test files
+                port: 22                               # SSH port
+                script: |
+                  cd /home/ngmktsit/www/business_sites/flexglobalprime/api  # Navigate to the second folder
+                  php artisan clean
+                  php artisan migrate
+                
+            - name: Run PHP Artisan Command on munchiesevents/api
+              uses: appleboy/ssh-action@v0.1.6
+              with:
+                host: ${{ secrets.FTP_HOST }}          # Server hostname
+                username: ${{ secrets.FTP_USERNAME }}  # SSH username
+                password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+                source: ./                         # Local directory with test files
+                port: 22                               # SSH port
+                script: |
+                  cd /home/ngmktsit/www/business_sites/munchiesevents/api  # Navigate to the second folder
+                  php artisan clean
+                  php artisan migrate
 
-      # - name: Run Migrations Only for ${{ matrix.folder }}/api (No File Changes)
-      #   if: steps.changed-files.outputs.changed_files == ''  # Run migrations if no files changed
-      #   uses: appleboy/ssh-action@v0.1.6
-      #   with:
-      #     host: ${{ secrets.FTP_HOST }}
-      #     username: ${{ secrets.FTP_USERNAME }}
-      #     password: ${{ secrets.FTP_PASSWORD }}
-      #     port: 22
-      #     script: |
-      #       cd /home/ngmktsit/www/business_sites/${{ matrix.folder }}/api
-      #       php artisan clean
-      #       php artisan migrate
+            - name: Run PHP Artisan Command on dami/api
+              uses: appleboy/ssh-action@v0.1.6
+              with:
+                host: ${{ secrets.FTP_HOST }}          # Server hostname
+                username: ${{ secrets.FTP_USERNAME }}  # SSH username
+                password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+                source: ./                         # Local directory with test files
+                port: 22                               # SSH port
+                script: |
+                  cd /home/ngmktsit/www/business_sites/dami/api  # Navigate to the second folder
+                  php artisan clean
+                  php artisan migrate
+          
+            - name: Run PHP Artisan Command on crestgrandeur/api
+              uses: appleboy/ssh-action@v0.1.6
+              with:
+                host: ${{ secrets.FTP_HOST }}          # Server hostname
+                username: ${{ secrets.FTP_USERNAME }}  # SSH username
+                password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+                source: ./                         # Local directory with test files
+                port: 22                               # SSH port
+                script: |
+                  cd /home/ngmktsit/www/business_sites/crestgrandeur/api  # Navigate to the second folder
+                  php artisan clean
+                  php artisan migrate
+                
+            - name: Run PHP Artisan Command on edzain/api
+              uses: appleboy/ssh-action@v0.1.6
+              with:
+                host: ${{ secrets.FTP_HOST }}          # Server hostname
+                username: ${{ secrets.FTP_USERNAME }}  # SSH username
+                password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+                port: 22                               # SSH port
+                script: |
+                  cd /home/ngmktsit/www/business_sites/edzain/api  # Navigate to the second folder
+                  php artisan migrate
+                  php artisan clean
+            
+            - name: Run PHP Artisan Command on lola/api
+              uses: appleboy/ssh-action@v0.1.6
+              with:
+                host: ${{ secrets.FTP_HOST }}          # Server hostname
+                username: ${{ secrets.FTP_USERNAME }}  # SSH username
+                password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+                port: 22                               # SSH port
+                script: |
+                  cd /home/ngmktsit/www/business_sites/lola/api  # Navigate to the second folder
+                  php artisan migrate
+                  php artisan clean
+              
+            
+            - name: Run PHP Artisan Command on mammanativekichen/api
+              uses: appleboy/ssh-action@v0.1.6
+              with:
+                host: ${{ secrets.FTP_HOST }}          # Server hostname
+                username: ${{ secrets.FTP_USERNAME }}  # SSH username
+                password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+                port: 22                               # SSH port
+                script: |
+                  cd /home/ngmktsit/www/business_sites/mammanativekichen/api  # Navigate to the second folder
+                  php artisan migrate
+                  php artisan clean
 
-      # Fallback: Uncomment to upload all files if debugging fails
-      # - name: Fallback Deploy to ${{ matrix.folder }}/api (All Files)
-      #   if: steps.changed-files.outputs.changed_files == ''
-      #   uses: appleboy/scp-action@v0.1.5
-      #   with:
-      #     host: ${{ secrets.FTP_HOST }}
-      #     username: ${{ secrets.FTP_USERNAME }}
-      #     password: ${{ secrets.FTP_PASSWORD }}
-      #     source: ./
-      #     target: ${{ secrets.FTP_PATH }}/business_sites/${{ matrix.folder }}/api/
-      #     port: 22
-      #     overwrite: true
-      #     debug: true
-      #     script: |
-      #       cd /home/ngmktsit/www/business_sites/${{ matrix.folder }}/api
-      #       php artisan clean
-      #       php artisan migrate
+
+            - name: Run PHP Artisan Command on alec/api
+              uses: appleboy/ssh-action@v0.1.6
+              with:
+                host: ${{ secrets.FTP_HOST }}          # Server hostname
+                username: ${{ secrets.FTP_USERNAME }}  # SSH username
+                password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+                port: 22                               # SSH port
+                script: |
+                  cd /home/ngmktsit/www/business_sites/alec/api  # Navigate to the second folder
+                  php artisan migrate
+                  php artisan clean
+              
+            - name: Run PHP Artisan Command on churchboymerch/api
+              uses: appleboy/ssh-action@v0.1.6
+              with:
+                host: ${{ secrets.FTP_HOST }}          # Server hostname
+                username: ${{ secrets.FTP_USERNAME }}  # SSH username
+                password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+                port: 22                               # SSH port
+                script: |
+                  cd /home/ngmktsit/www/business_sites/churchboymerch/api  # Navigate to the second folder
+                  php artisan migrate
+                  php artisan clean
+            
+            - name: Run PHP Artisan Command on eloka/api
+              uses: appleboy/ssh-action@v0.1.6
+              with:
+                host: ${{ secrets.FTP_HOST }}          # Server hostname
+                username: ${{ secrets.FTP_USERNAME }}  # SSH username
+                password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+                port: 22                               # SSH port
+                script: |
+                  cd /home/ngmktsit/www/business_sites/eloka/api  # Navigate to the second folder
+                  php artisan migrate
+                  php artisan clean
+
+            - name: Run PHP Artisan Command on business/api
+              uses: appleboy/ssh-action@v0.1.6
+              with:
+                host: ${{ secrets.FTP_HOST }}          # Server hostname
+                username: ${{ secrets.FTP_USERNAME }}  # SSH username
+                password: ${{ secrets.FTP_PASSWORD }}  # SSH password
+                port: 22                               # SSH port
+                script: |
+                  cd /home/ngmktsit/www/business_sites/business/api  # Navigate to the second folder
+                  php artisan migrate
+                  php artisan clean
