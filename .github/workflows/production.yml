@@ -19,22 +19,21 @@ jobs:
         with:
           fetch-depth: 2  # Fetch current and previous commit for git diff
 
-      - name: Get Changed Files
-        id: changed-files
-        run: |
-          # Get commit SHA before the push (previous commit)
-          PREV_COMMIT=${{ github.event.before }}
-          # Get changed files, excluding deleted files
-          CHANGED_FILES=$(git diff --name-only --diff-filter=ACM $PREV_COMMIT HEAD || true)
-          echo "Changed files: $CHANGED_FILES"
-          # Convert to comma-separated list for scp-action
-          CHANGED_FILES_COMMA=$(echo "$CHANGED_FILES" | tr '\n' ',' | sed 's/,$//')
-          echo "changed_files=$CHANGED_FILES_COMMA" >> $GITHUB_OUTPUT
-          # Log for debugging
-          echo "Changed files (comma-separated): $CHANGED_FILES_COMMA"
+      # - name: Get Changed Files
+      #   id: changed-files
+      #   run: |
+      #     # Get commit SHA before the push (previous commit)
+      #     PREV_COMMIT=${{ github.event.before }}
+      #     # Get changed files, excluding deleted files
+      #     CHANGED_FILES=$(git diff --name-only --diff-filter=ACM $PREV_COMMIT HEAD || true)
+      #     echo "Changed files: $CHANGED_FILES"
+      #     # Convert to comma-separated list for scp-action
+      #     CHANGED_FILES_COMMA=$(echo "$CHANGED_FILES" | tr '\n' ',' | sed 's/,$//')
+      #     echo "changed_files=$CHANGED_FILES_COMMA" >> $GITHUB_OUTPUT
+      #     # Log for debugging
+      #     echo "Changed files (comma-separated): $CHANGED_FILES_COMMA"
 
       - name: Deploy to ${{ matrix.folder }}/api
-        if: steps.changed-files.outputs.changed_files != ''  # Skip if no files changed
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.FTP_HOST }}
@@ -50,18 +49,18 @@ jobs:
             php artisan clean
             php artisan migrate
 
-      - name: Run Migrations Only for ${{ matrix.folder }}/api (No File Changes)
-        if: steps.changed-files.outputs.changed_files == ''  # Run migrations if no files changed
-        uses: appleboy/ssh-action@v0.1.6
-        with:
-          host: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: 22
-          script: |
-            cd /home/ngmktsit/www/business_sites/${{ matrix.folder }}/api
-            php artisan clean
-            php artisan migrate
+      # - name: Run Migrations Only for ${{ matrix.folder }}/api (No File Changes)
+      #   if: steps.changed-files.outputs.changed_files == ''  # Run migrations if no files changed
+      #   uses: appleboy/ssh-action@v0.1.6
+      #   with:
+      #     host: ${{ secrets.FTP_HOST }}
+      #     username: ${{ secrets.FTP_USERNAME }}
+      #     password: ${{ secrets.FTP_PASSWORD }}
+      #     port: 22
+      #     script: |
+      #       cd /home/ngmktsit/www/business_sites/${{ matrix.folder }}/api
+      #       php artisan clean
+      #       php artisan migrate
 
       # Fallback: Uncomment to upload all files if debugging fails
       # - name: Fallback Deploy to ${{ matrix.folder }}/api (All Files)
