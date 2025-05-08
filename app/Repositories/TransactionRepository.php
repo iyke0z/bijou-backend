@@ -179,18 +179,21 @@ class TransactionRepository implements TransactionRepositoryInterface{
                         $totalCost
                     );
                 }
-            } else {
-                registerLedger(
-                    $isNegativeStock ? 'negative_stock' : 'sales',
-                    'sales_'.$transaction->id,
-                    $request['amount'],
-                    $shopId,
-                    $request['type'],
-                    $request['payment_method'],
-                    $request['logistics'] ?? 0,
-                    $request['part_payment_amount'] ?? 0,
-                    $totalCost
-                );
+            } 
+            else {
+                if ($request['payment_type']  != 'prepayment' || $request['payment_type'] != 'postpayment') {
+                    registerLedger(
+                        $isNegativeStock ? 'negative_stock' : 'sales',
+                        'sales_'.$transaction->id,
+                        $request['amount'],
+                        $shopId,
+                        $request['payment_method'] == 'wallet' ? 'wallet' : $request['type'],
+                        $request['payment_method'],
+                        $request['logistics'] ?? 0,
+                        $request['part_payment_amount'] ?? 0,
+                        $totalCost
+                    );
+                }
             }
             
             if($request['payment_method'] == "wallet" || $request['type'] == 'on_credit'){
@@ -346,41 +349,45 @@ class TransactionRepository implements TransactionRepositoryInterface{
             }
             
             // Now call registerLedger just once per payment method
-            if ($request['is_split_payment']) {
-                foreach ($request["split"] as $split) {
-                    $split_payment = new SplitPayments();
-                    $split_payment->transaction_id = $transaction->id;
-                    $split_payment->payment_method = $split["split_playment_method"];
-                    $split_payment->amount = $split["split_payment_amount"];
-                    $split_payment->bank_id = $split["bank_id"];
-                    $split_payment->shop_id = $shopId;
-                    $split_payment->save();
-            
-                    registerLedger(
-                        $isNegativeStock ? 'negative_stock' : 'sales',
-                        'sales_'.$transaction->id,
-                        $split['split_payment_amount'],
-                        $shopId,
-                        $request['type'],
-                        $split['split_playment_method'],
-                        $request['logistics'] ?? 0,
-                        0, // part_payment_amount (already handled)
-                        $totalCost
-                    );
+                if ($request['is_split_payment']) {
+                    foreach ($request["split"] as $split) {
+                        $split_payment = new SplitPayments();
+                        $split_payment->transaction_id = $transaction->id;
+                        $split_payment->payment_method = $split["split_playment_method"];
+                        $split_payment->amount = $split["split_payment_amount"];
+                        $split_payment->bank_id = $split["bank_id"];
+                        $split_payment->shop_id = $shopId;
+                        $split_payment->save();
+
+                        registerLedger(
+                            $isNegativeStock ? 'negative_stock' : 'sales',
+                            'sales_'.$transaction->id,
+                            $split['split_payment_amount'],
+                            $shopId,
+                            $request['type'],
+                            $split['split_playment_method'],
+                            $request['logistics'] ?? 0,
+                            0, // part_payment_amount (already handled)
+                            $totalCost
+                        );
+                    }
+                } 
+                else {
+                    if ($request['payment_type']  != 'prepayment' || $request['payment_type'] != 'postpayment') {
+                        registerLedger(
+                            $isNegativeStock ? 'negative_stock' : 'sales',
+                            'sales_'.$transaction->id,
+                            $request['amount'],
+                            $shopId,
+                            $request['payment_method'] == 'wallet' ? 'wallet' : $request['type'],
+                            $request['payment_method'],
+                            $request['logistics'] ?? 0,
+                            $request['part_payment_amount'] ?? 0,
+                            $totalCost
+                        );
+                    }
                 }
-            } else {
-                registerLedger(
-                    $isNegativeStock ? 'negative_stock' : 'sales',
-                    'sales_'.$transaction->id,
-                    $request['amount'],
-                    $shopId,
-                    $request['type'],
-                    $request['payment_method'],
-                    $request['logistics'] ?? 0,
-                    $request['part_payment_amount'] ?? 0,
-                    $totalCost
-                );
-            }
+
             
             if($request['payment_method'] == "wallet" || $request['type'] == 'on_credit'){
                 $customer = Customer::find($request["customer_id"]);
