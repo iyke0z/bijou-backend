@@ -102,7 +102,7 @@ class ProductRepository implements ProductRepositoryInterface{
                         'price' => $request['price'],
                         'code' => $request['code'],
                         'show_on_website' => $request['show_on_website'],
-                        'description' => $request['material'],
+                        'materials' => $request['material'],
                     ]);
                     $user = Auth::user()->id;
                     ProductTrait::log_product($id, 'update', $request['stock'], $request['price'], $user, $shopId);
