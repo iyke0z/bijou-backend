@@ -45,18 +45,35 @@ class ReportController extends Controller
         ]);
 
         if($validated){
-            $getTransactions = applyShopFilter(Transaction::whereBetween('created_at', [$start_date, $end_date])
-                                    ->with('customer')
-                                    ->with(['user' => function ($q) {
-                                        $q->withTrashed();
-                                    }])
-                                    ->with(['sales' => function($q){
-                                        $q->join('products', 'sales.product_id', 'products.id')->withTrashed();
-                                    }])
-                                ->with('deliveryNote')->with('logistics')
-                                    ->orderBy('id', 'desc')
-                                    ->withTrashed(), $shopId)->get();
-                
+            $getTransactions = applyShopFilter(
+    Transaction::whereBetween('created_at', [$start_date, $end_date])
+        ->with('customer')
+        ->with(['user' => function ($q) {
+            $q->withTrashed()->select('id', 'fullname');
+        }])
+        ->with(['sales' => function ($q) {
+            $q->join('products', 'sales.product_id', '=', 'products.id')
+                ->select([
+                    'sales.id',
+                    'sales.ref',
+                    'sales.shop_id',
+                    'sales.product_id',
+                    'sales.user_id',
+                    'sales.qty',
+                    'sales.price', // Alias sales.price
+                    'sales.created_at',
+                    'products.id',
+                    'products.stock',
+                    'products.name' // Minimal product fields
+                ])
+                ->withTrashed();
+        }])
+        ->with('deliveryNote')
+        ->with('logistics')
+        ->orderBy('transactions.id', 'desc')
+        ->withTrashed(),
+    $shopId
+)->get();
                 $get_sales = Sale::join('transactions', 'sales.ref', 'transactions.id')
                                     ->join('customers', 'transactions.customer_id', 'customers.id')
                                 ->whereBetween('transactions.created_at', [$start_date, $end_date])

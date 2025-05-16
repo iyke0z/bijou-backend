@@ -533,12 +533,12 @@ class WebsiteController extends Controller
         return response()->json([
             'title' => "Contact Us",
             'info' => [
-                'email' => $contact->email,
-                'phone' => $contact->phone,
-                'address' => $contact->address,
+                'email' => $contact->email ?? null,
+                'phone' => $contact->phone ?? null,
+                'address' => $contact->address ?? null,
             ],
-            'image' => $contact->image,
-            'image_alt' => $contact->image_alt,
+            'image' => $contact->image ?? null,
+            'image_alt' => $contact->image_alt ?? null,
         ]);
     }
 
