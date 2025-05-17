@@ -116,7 +116,7 @@ class WebsiteController extends Controller
     public function createHeroBanner(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif',
+            'image' => 'sometimes|file|image|mimes:jpeg,png,jpg,gif', // Only validate if image is present
             'title' => 'required|string|max:255',
             'description' => 'required|string|max:255',
         ]);
@@ -140,9 +140,9 @@ class WebsiteController extends Controller
     public function updateHeroBanner(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'image' => 'sometimes|image|mimes:jpeg,png,jpg,gif',
-            'title' => 'sometimes|string|max:255',
-            'description' => 'sometimes|string|max:255',
+            'image' => 'sometimes|file|image|mimes:jpeg,png,jpg,gif', // Only validate if image is present
+            'title' => 'sometimes|string|max:255', // Only validate if title is present
+            'description' => 'sometimes|string|max:255', // Only validate if description is present
         ]);
 
         if ($validator->fails()) {
@@ -245,8 +245,8 @@ class WebsiteController extends Controller
     public function createSocialLinks(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'links' => 'required|array|size:4',
-            'links.*.label' => 'required|string|in:Instagram,Facebook,Twitter,Pinterest',
+            'links' => 'required|array',
+            'links.*.label' => 'required|string',
             // 'links.*.path' => 'required|string|max:255|url',
         ]);
 
@@ -378,7 +378,7 @@ class WebsiteController extends Controller
             'email' => 'required|email|max:255',
             'phone' => 'required|string|max:255',
             'address' => 'required|string|max:255',
-            'image' => 'sometimes|image|mimes:jpeg,png,jpg,gif',
+            'image' => 'sometimes|file|image|mimes:jpeg,png,jpg,gif', // Only validate if image is present
             'image_alt' => 'sometimes|string|max:255',
         ]);
 
@@ -489,10 +489,6 @@ class WebsiteController extends Controller
         return res_completed('Return Policy created successfully');
     }
 
-    
-
-
-
     public function showHeroBanners()
     {
         $heroBanners = HeroBanner::all();
@@ -557,6 +553,7 @@ class WebsiteController extends Controller
         $themeSettings = ThemeSetting::first();
 
         return response()->json([
+            "id"=> $themeSettings->id,
             "primaryColor" => $themeSettings->primary_color,
             "secondaryColor" => $themeSettings->secondary_color,
         ]);
@@ -567,7 +564,7 @@ class WebsiteController extends Controller
         $validator = Validator::make($request->all(), [
             'payment_gateway' => 'required|string|max:255',
             'api_key' => 'required|string|max:255',
-            'secret_key' => 'required|string|max:255',
+            'secret_key' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -629,10 +626,7 @@ class WebsiteController extends Controller
         if (!$paymentConfig) {
             return response()->json(['error' => 'Payment Config not found'], 404);
         }
-        return response()->json([
-            'paystackKey' => $paymentConfig->api_key,
-            'flutterwaveKey' => null,
-        ]);
+        return response()->json($paymentConfig);
     }
 
     public function businessDetails()
