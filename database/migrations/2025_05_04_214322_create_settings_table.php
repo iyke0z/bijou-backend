@@ -17,7 +17,7 @@ class CreateSettingsTable extends Migration
             $table->id();
             $table->string('brand_name', 255);
             $table->text('footer_description');
-            $table->timestamps();
+            $table->timestamps();bs
         });
     }
 
